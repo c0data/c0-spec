@@ -1,23 +1,22 @@
-# C0DATA Conformance Vectors
+# C0DATA Spec & Conformance Vectors
 
-The canonical, language-agnostic test fixtures for [C0DATA](https://github.com/trans/c0data).
-This repository is the **single source of truth**: every implementation
-(Crystal, JS, Rust, C, …) vendors a copy and runs against it, so a fixture that
-passes in one implementation must pass in all of them — the property that
-content addressing depends on.
+The single source of truth for [C0DATA](https://github.com/c0data) — the format
+specification and the language-agnostic test fixtures that every implementation
+(Crystal, JS, Rust, C, Python, …) is checked against. A fixture that passes in
+one implementation must pass in all of them — the property content addressing
+depends on.
 
 ## Layout
 
-- `vectors/*.json` — the fixtures (decode, encode, canonical, invalid, stream).
-- `vectors/README.md` — the fixture schema (encoding conventions, per-file
-  case shapes).
+- `DESIGN.md` — the specification (the normative format definition).
+- `reference.md` — the technical reference (format overview, control codes,
+  data shapes, escaping, `c0fmt` usage).
+- `vectors/*.json` — the conformance fixtures (decode, encode, canonical,
+  invalid, stream).
+- `vectors/README.md` — the fixture schema.
 
 ## Using the vectors
 
-Each implementation keeps an in-tree copy under its own `conformance/` (so its
-tests run offline) and re-syncs from here at a tagged version. The copy should
-record which version it was synced from. When the vectors change, bump the
-version here, then re-vendor into each implementation.
-
-Treat these files as read-only downstream: edit them here, never in a vendored
-copy.
+Each implementation includes this repository as a git submodule and runs its
+tests against `vectors/`, so the copies can't drift — git pins the exact
+version. Edit the fixtures here, never in a submodule checkout.
