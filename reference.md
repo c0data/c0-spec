@@ -11,7 +11,7 @@ with UTF-8 text values. It sits between human-readable text formats (JSON,
 YAML, TOML) and opaque binary formats (protobuf, msgpack). Values are plain
 text. Structure is expressed through single-byte control codes.
 
-See [DESIGN.md](https://github.com/trans/c0data/blob/main/DESIGN.md) for the
+See [DESIGN.md](DESIGN.md) for the
 full specification and future directions.
 
 ### Assigned Control Codes
@@ -537,7 +537,7 @@ Add to your `shard.yml`:
 ```yaml
 dependencies:
   c0:
-    github: trans/c0data
+    github: c0data/c0-cr
 ```
 
 ```crystal
