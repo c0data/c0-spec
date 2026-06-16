@@ -14,6 +14,8 @@ depends on.
 - `vectors/*.json` — the conformance fixtures (decode, encode, canonical,
   invalid, stream).
 - `vectors/README.md` — the fixture schema.
+- `notes/` — design notes and proposals (non-normative): alternate
+  design sketches and the schema-system proposal.
 
 ## Using the vectors
 
