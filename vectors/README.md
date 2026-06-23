@@ -73,6 +73,36 @@ Canonicality classification. Case shape:
 bytes are a canonical document unit (well-formed, minimally escaped,
 no ETB/EOT framing).
 
+### map-canonical.json
+
+Producer-level canonicalization of logically-unordered **maps**. Case
+shape:
+
+```json
+{
+  "name": "...", "desc": "...",
+  "group": "database" | null,
+  "map": [["key", "value"], ...],
+  "canonical": "<hex>"
+}
+```
+
+A `key` or `value` is a JSON string (logical bytes), `{"hex": "..."}`
+(binary), or — for a `value` only — `{"map": [[k, v], ...]}` for a
+nested map. The `map` entries are given in **input (pre-sort) order**; a
+conforming producer MUST emit exactly `canonical`: entries sorted by
+ascending byte-lexicographic order of each key's **logical (unescaped)**
+bytes, nested maps sorted recursively, value bytes minimally escaped.
+
+Unlike the other files, **these are not codec tests.** Whether a group
+is an unordered map or an ordered sequence is invisible in the bytes, so
+the byte-level `canonical.json` suite cannot decide them (the same bytes
+are canonical as a sequence and non-canonical as an unsorted map). The
+map-sort rule is a contract on *producers* — the JSON object ↔ C0
+mapping, a schema-driven encoder, an application such as transfs — and
+these vectors are consumed there, not by the core tokenizer/codec.
+Codec-only conformance harnesses should skip this file.
+
 ### invalid.json
 
 Bytes that MUST be rejected: `{"name", "desc", "bytes"}` — tokenizing

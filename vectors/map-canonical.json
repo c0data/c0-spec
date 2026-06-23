@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "desc": "Producer-level canonicalization of logically-unordered maps. NOT a codec test: the byte-level canonical suite cannot decide these, because the same bytes are canonical as an ordered sequence and non-canonical as a map (see DESIGN.md 'Order Is Significant'). These vectors are consumed by layers that HAVE a map type -- the JSON object <-> C0 mapping, a schema-driven encoder, applications such as transfs. A producer given the `map` entries in the order shown MUST emit exactly `canonical`.",
+  "encoding": {
+    "group": "the group label (a name/identifier), or null for an unlabeled GS group",
+    "map": "array of [key, value] entries in INPUT (pre-sort) order; the producer sorts them",
+    "key": "a JSON string (logical UTF-8 bytes) or {\"hex\": \"..\"} for non-UTF-8/binary keys",
+    "value": "a JSON string, {\"hex\": \"..\"}, or {\"map\": [[k, v], ...]} for a nested map",
+    "canonical": "expected compact bytes as lowercase hex: GS label, then entries sorted by ascending byte-lex of each key's LOGICAL (unescaped) bytes, value bytes DLE-escaped minimally"
+  },
+  "cases": [
+    {
+      "name": "basic-sort",
+      "desc": "Two entries given out of order; sorted by key: host (0x68) before port (0x70)",
+      "group": "database",
+      "map": [["port", "5432"], ["host", "localhost"]],
+      "canonical": "1d64617461626173651e686f73741f6c6f63616c686f73741e706f72741f35343332"
+    },
+    {
+      "name": "byte-lex-not-alpha",
+      "desc": "Order is by raw byte, not case-insensitive or locale: 'A' (0x41) < 'Z' (0x5a) < 'a' (0x61)",
+      "group": "m",
+      "map": [["a", "3"], ["Z", "2"], ["A", "1"]],
+      "canonical": "1d6d1e411f311e5a1f321e611f33"
+    },
+    {
+      "name": "logical-key-escaped-control",
+      "desc": "Keys are values and may carry escaped control bytes. Sort on the LOGICAL key: key 'a<HT>b' (61 09 62) sorts before 'az' (61 7a) because HT (0x09) < 'z' (0x7a) at the second byte -- even though the HT is DLE-escaped (10 09) on the wire",
+      "group": "k",
+      "map": [["az", "2"], [{"hex": "610962"}, "1"]],
+      "canonical": "1d6b1e611009621f311e617a1f32"
+    },
+    {
+      "name": "empty-key-first",
+      "desc": "The empty key sorts before any non-empty key (it is a proper prefix of all others)",
+      "group": "e",
+      "map": [["a", "y"], ["", "x"]],
+      "canonical": "1d651e1f781e611f79"
+    },
+    {
+      "name": "nested-map-recurse",
+      "desc": "A value that is itself a map is canonicalized recursively inside STX/ETX (where the separator hierarchy resets): top level sorts 'nested' (0x6e) before 'z' (0x7a); the inner map sorts 'a' before 'b'",
+      "group": "cfg",
+      "map": [["z", "26"], ["nested", {"map": [["b", "2"], ["a", "1"]]}]],
+      "canonical": "1d6366671e6e65737465641f021e611f311e621f32031e7a1f3236"
+    }
+  ]
+}

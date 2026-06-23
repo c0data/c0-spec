@@ -304,13 +304,44 @@ complicate every name scan; identifiers stay plain.)
 
 C0 defines **no unordered constructs**. Records appear in order; fields
 are positional; SOH header columns are positional. Conforming codecs
-MUST preserve order exactly and MUST NOT reorder. Canonicalizing
-logically unordered data — a map's keys, a set's members, a directory's
-entries — into a definite order is the **producer's responsibility**,
-above the format (compare git tree objects or RFC 8785 for JSON: the
-sort rule belongs to the application's data model, not the wire
-format). Where no domain rule exists, the recommended convention is to
-sort records byte-lexicographically by first field.
+MUST preserve order exactly and MUST NOT reorder.
+
+Some logical data is *unordered*: a map's keys, a set's members, a
+directory's entries. C0 has no type for these — it cannot distinguish a
+map from an ordered list of pairs, nor identify which field is a key —
+so **canonicalizing unordered data into a definite order is the
+producer's responsibility**, above the format (compare git tree objects,
+or RFC 8785 for JSON: the sort rule belongs to the application's data
+model, not the wire format).
+
+This responsibility is **normative wherever the result will be hashed.**
+A producer that encodes a logically-unordered keyed collection (a *map*)
+as a C0 group of two-field `key[US]value` records, intending the bytes
+to be content-addressed, MUST canonicalize it as follows:
+
+- **Sort by logical key.** Order entries by ascending byte-lexicographic
+  comparison of each key's **logical (unescaped) bytes** — the key as a
+  value, before DLE escaping. (Sorting on wire bytes is not specified;
+  sort the decoded key.)
+- **Unique keys.** A canonical map has no duplicate keys. Resolving
+  duplicates in the source (last-wins, error, merge) is a producer
+  data-model decision; the hashed map contains each key once. A record
+  list that genuinely repeats a key is an *ordered sequence*, not a map,
+  and is hashed in its given order.
+- **Recurse.** If a value is itself an unordered collection (nested via
+  STX/ETX), the same rule applies to it.
+- **Maps only.** Apply this *only* to logically-unordered collections.
+  Genuinely ordered records — table rows, document blocks, list
+  elements — MUST NOT be reordered. Where the producer has no domain
+  order and no schema, the recommended default remains to sort records
+  byte-lexicographically by first field.
+
+Because the byte stream cannot reveal whether a group is a map or an
+ordered list, this rule **cannot be verified by the byte-level canonical
+suite** — it is a contract on producers, checked at the layer that knows
+the data is a map (the JSON object ↔ C0 mapping, a schema-driven
+encoder, an application such as transfs). Those layers carry their own
+canonicalization vectors.
 
 ### Framing Is Outside the Hash
 
