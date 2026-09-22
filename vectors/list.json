@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "desc": "List fields: a field whose value is a flat list, encoded as US-separated items inside STX/ETX (DESIGN.md 'Nested Structures': arrays are simply US-separated values inside STX/ETX). Decode: every case's bytes are a bare record stream holding one record; each `record` entry that is a JSON array is read with the list accessor (Record#list) and must equal those logical items, every other entry is read as a scalar value. Encode: when `canonical` is true, building the record with the first field as a scalar and each later entry via list_field (array) or field (scalar) MUST produce exactly `bytes`, and `bytes` must be canonical. The first field is always a scalar.",
+  "cases": [
+    {
+      "name": "three-items",
+      "desc": "A list of three plain items between two scalar fields",
+      "bytes": "1e416c6963651f0241646d696e1f456469746f721f55736572031f313530322e3330",
+      "record": [
+        "Alice",
+        [
+          "Admin",
+          "Editor",
+          "User"
+        ],
+        "1502.30"
+      ],
+      "canonical": true
+    },
+    {
+      "name": "escaped-items",
+      "desc": "Item bytes < 0x20 (US, STX, RS) are DLE-escaped; an empty item is allowed",
+      "bytes": "1e781f0261101f621f1f631002641f65101e6603",
+      "record": [
+        "x",
+        [
+          "a\u001fb",
+          "",
+          "c\u0002d",
+          "e\u001ef"
+        ]
+      ],
+      "canonical": true
+    },
+    {
+      "name": "empty-list",
+      "desc": "An empty scope is an empty list, not a list of one empty item",
+      "bytes": "1e781f0203",
+      "record": [
+        "x",
+        []
+      ],
+      "canonical": true
+    },
+    {
+      "name": "two-empty-items",
+      "desc": "A lone US inside the scope yields two empty items",
+      "bytes": "1e781f021f03",
+      "record": [
+        "x",
+        [
+          "",
+          ""
+        ]
+      ],
+      "canonical": true
+    },
+    {
+      "name": "single-item",
+      "desc": "One item, no separator",
+      "bytes": "1e781f026f6e6c7903",
+      "record": [
+        "x",
+        [
+          "only"
+        ]
+      ],
+      "canonical": true
+    },
+    {
+      "name": "two-lists",
+      "desc": "Adjacent list fields; ETX closes one before the next US",
+      "bytes": "1e781f0261031f02621f6303",
+      "record": [
+        "x",
+        [
+          "a"
+        ],
+        [
+          "b",
+          "c"
+        ]
+      ],
+      "canonical": true
+    },
+    {
+      "name": "binary-item",
+      "desc": "Unassigned NUL is escaped; 0xFF is raw",
+      "bytes": "1e781f021000ff03",
+      "record": [
+        "x",
+        [
+          {
+            "hex": "00ff"
+          }
+        ]
+      ],
+      "canonical": true
+    },
+    {
+      "name": "nested-scope-in-item",
+      "desc": "A nested STX/ETX scope inside an item stays one item (decode only: an encoder would escape it)",
+      "bytes": "1e781f02611f02781f79031f6203",
+      "record": [
+        "x",
+        [
+          "a",
+          {
+            "hex": "02781f7903"
+          },
+          "b"
+        ]
+      ],
+      "canonical": false
+    },
+    {
+      "name": "plain-field-as-list",
+      "desc": "Reading a non-scope field as a list yields its value as one item (decode only)",
+      "bytes": "1e781f706c61696e",
+      "record": [
+        "x",
+        [
+          "plain"
+        ]
+      ],
+      "canonical": false
+    },
+    {
+      "name": "missing-etx",
+      "desc": "A scope truncated before ETX still splits on US (decode only)",
+      "bytes": "1e781f02611f62",
+      "record": [
+        "x",
+        [
+          "a",
+          "b"
+        ]
+      ],
+      "canonical": false
+    }
+  ]
+}

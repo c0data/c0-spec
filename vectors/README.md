@@ -124,3 +124,30 @@ Stream-mode (ETB commit) semantics. Case shape:
 committed block's bytes (previous commit to ETB, marker and payload
 excluded). `records` (optional) — logical records of the committed
 region.
+
+### list.json
+
+List fields — a field whose value is a flat list, encoded as US-separated
+items inside STX/ETX (DESIGN.md "Nested Structures": arrays are simply
+US-separated values inside STX/ETX). Case shape:
+
+```json
+{"name": "...", "desc": "...", "bytes": "<hex>",
+ "record": ["scalar", ["item", {"hex": ".."}, ...], "scalar", ...],
+ "canonical": true}
+```
+
+`bytes` is a bare record stream holding one record. `record` is that
+record's expected logical fields: an entry that is a JSON array is a
+list field and is read with the list accessor (`Record#list` or its
+equivalent), which splits the field's STX/ETX scope on top-level US and
+DLE-unescapes each item; every other entry is read as a scalar value.
+The first field is always a scalar.
+
+`canonical` — when true, building the record with the first field as a
+scalar and each later entry via the builder's list-field writer (array)
+or scalar field writer MUST produce exactly `bytes`, which are canonical.
+When false the case is decode-only: the bytes are readable as shown but
+are not what an encoder would emit (a nested scope inside an item, a
+plain field read as a one-item list, a scope truncated before ETX).
+
