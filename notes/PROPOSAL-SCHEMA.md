@@ -108,6 +108,18 @@ declares the shape of data. The two uses of SOH are consistent:
 A parser distinguishes them with a single byte check: after GS, is the
 next byte SOH? If yes, it's a schema group. If no, it's a data group.
 
+> **Known flaw (2026-09-23).** This marker is not free. `[GS][SOH]user` is
+> valid today: it parses as a group with an **empty name** followed by a
+> header row `user`, and the reference implementation returns exactly that
+> (name `""`, headers `["user"]`). So schema-unaware readers would not skip
+> such a group; they would read it as an unnamed data group with a header.
+> Nobody is likely to write an unnamed group with a header, but "unlikely"
+> is not "meaningless". A marker should pass the test the appendix frame
+> passes (see `PROPOSAL-APPENDIX.md`: `EOT` followed by `ENQ` is
+> well-formed and has no meaning at all). Either unnamed groups with
+> headers must be made invalid, which is a breaking change, or a different
+> marker position must be found. Open Question 7.
+
 **Why not a text convention like `@`?** Text conventions require string
 matching and are invisible to the structural parser. SOH is a control
 code — it's machine-discoverable, unambiguous, and consistent with
@@ -240,6 +252,17 @@ of JSON (~580 bytes). The C0 schema is ~24 lines (~210 bytes compact).
 
 6. **Validation API** — What should `C0::Schema.validate(data, schema)`
    return? Boolean? Array of errors? Should validation be streaming?
+
+7. **A truly free marker** — `[GS][SOH]` already means "unnamed group with
+   a header" (see the note under "Schema Marker"). The marker must be a
+   position that is well-formed but meaningless today, or the empty-name
+   case must be ruled invalid first. Candidates to evaluate: a control code
+   that cannot legally follow GS today, or a sequence the name guard makes
+   impossible (names may not contain control bytes). Whatever is chosen
+   should also serve a future forward **manifest** (a marked group that
+   declares what to expect over the next extent; see `PROPOSAL-APPENDIX.md`,
+   "A forward manifest"), since schema and manifest are the same kind of
+   declaration.
 
 ## Feedback
 
