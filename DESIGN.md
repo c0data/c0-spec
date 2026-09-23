@@ -376,6 +376,12 @@ EOT (0x04) marks the end of a complete C0DATA document or message. Optional
 in file-at-rest scenarios (EOF is implicit). Useful for streaming, where
 multiple documents may be sent over a single connection.
 
+**Reserved:** EOT immediately followed by ENQ. ENQ is defined only as a
+field value, so this sequence is well-formed but meaningless today. It is
+reserved for a possible binary appendix frame (see Speculations and
+`notes/PROPOSAL-APPENDIX.md`) and MUST NOT be given any other meaning.
+Readers that stop at EOT are unaffected.
+
 
 ## Stream Mode (ETB Commits)
 
@@ -603,14 +609,32 @@ digest is 64 hex bytes) or as DLE-escaped raw bytes (~12.5% average
 inflation, in-spec today, scan-safe). Large blobs belong out-of-line,
 addressed by name or hash — content-addressed stores do exactly this.
 
-The one shape that could ever work without breaking the invariant: a
-**blob appendix after EOT**. The scanner stops at EOT, so raw bytes
-beyond it are never scanned; a regular group inside the document could
-declare (name, offset, length) entries pointing into the appendix. If a
-real consumer with in-line blob needs ever appears, that is the design
-to explore — likely as a separate C0BLOB spec, not core C0. (YAML
-reached the same conclusion from a different direction: its `!!binary`
-type is base64 text, never raw bytes.)
+**Blob sidecar pattern (recommended today).** Keep each blob in its own
+file or content-addressed object and describe it with ordinary rows:
+
+    [GS]blobs[SOH]name[US]location[US]length[US]hash
+    [RS]image-001[US]sha256:ab12…[US]4096[US]sha256:ab12…
+    [RS]audio[US]media/audio.opus[US]18000[US]sha256:cd34…
+
+`location` is a path or a content hash, as the application chooses;
+`length` and `hash` (`<alg>:<hex>`, the ETB payload form) are optional.
+Fields elsewhere point at a blob with an ordinary path reference,
+`[ENQ][STX]blobs[US]image-001[ETX]`. Each blob is independently
+memory-mappable, cacheable, and deduplicated, and every existing tool
+handles it. The application, which is the authority on what values mean,
+resolves the location.
+
+The one in-format shape that would not break the invariant is a **blob
+appendix after EOT**: raw bytes beyond EOT are never scanned, and an
+index group inside the document addresses them by offset. This was
+designed in full and **deferred** (`notes/PROPOSAL-APPENDIX.md`): it
+turns C0DATA into a container, and the sidecar pattern above serves the
+need at a higher layer. The index columns above are chosen so that a
+sidecar row becomes an appendix row by replacing `location` with an
+`offset`, should the appendix ever be adopted. `EOT` followed by `ENQ`
+is reserved for its frame. (YAML reached the same conclusion from a
+different direction: its `!!binary` type is base64 text, never raw
+bytes.)
 
 ### Type Discrimination (Numbers vs Text)
 
