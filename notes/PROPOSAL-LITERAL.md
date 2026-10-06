@@ -164,7 +164,8 @@ Every byte below 0x20 belongs to the format:
   value (such a value must be literal);
 - DLE begins a sequence. DLE STX opens a literal region; DLE SOH opens a
   literal heading. All other DLE sequences are reserved for supplementary
-  controls, which is what ASCII designed DLE for;
+  controls, which is what ASCII designed DLE for, and are errors until
+  a spec revision defines them;
 - any other code is unassigned and rejected.
 
 A space is data inside a value and layout at its edges. So a plain value
@@ -172,29 +173,18 @@ holds only bytes from 0x20 up and never begins or ends with a space.
 
 ### Reserved DLE sequences (decided 2026-10-06)
 
-A DLE sequence is always exactly two bytes and never carries a hidden
-payload, so a reader always knows how far one extends. Whether an
-unknown one may be skipped is carried by its second byte, as PNG does
-with the case of a chunk name:
+A DLE sequence is exactly two bytes. The defined ones are DLE STX and
+DLE SOH. Any other DLE sequence is an error, everywhere, including
+inside a literal region. New sequences come only with a spec revision,
+announced by the heading's `version` key, so a reader built for an
+older spec refuses at the heading with a clear message rather than
+guessing at bytes it cannot read.
 
-| Second byte | Class | A reader that does not know it |
-|---|---|---|
-| a control code, below 0x20 | structural: must be understood | rejects the input |
-| a graphic character, 0x20 and up | ancillary: may be ignored | skips the two bytes |
-
-DLE STX and DLE SOH are structural. ASCII's own supplementary controls
-(DLE `0`, DLE `;`) were spelled with graphic characters, and future hints
-or annotations would be too. New sequences come only by spec revision.
-
-A reader may offer a strict mode that rejects anything unknown of either
-class. The default is as in the table: forward compatibility by default,
-strictness on request.
-
-**Inside a literal region nothing unknown is ignorable.** There, a DLE
-sequence stands for data: two bytes on the wire for one byte of the
-value. A reader meeting one it does not know cannot produce the right
-value by skipping it, keeping it, or guessing, and a conforming writer
-never emits one, so it is either damage or a newer spec. Reject it.
+An earlier draft classed unknown sequences as skippable or not by their
+second byte. It was dropped: skipping inside a value breaks the
+contiguous slice, canonical form would need a rule for it, every
+implementation would carry logic nothing exercises, and the version key
+already does the job.
 
 ### Lists and nested data
 
