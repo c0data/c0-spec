@@ -170,6 +170,32 @@ Every byte below 0x20 belongs to the format:
 A space is data inside a value and layout at its edges. So a plain value
 holds only bytes from 0x20 up and never begins or ends with a space.
 
+### Reserved DLE sequences (decided 2026-10-06)
+
+A DLE sequence is always exactly two bytes and never carries a hidden
+payload, so a reader always knows how far one extends. Whether an
+unknown one may be skipped is carried by its second byte, as PNG does
+with the case of a chunk name:
+
+| Second byte | Class | A reader that does not know it |
+|---|---|---|
+| a control code, below 0x20 | structural: must be understood | rejects the input |
+| a graphic character, 0x20 and up | ancillary: may be ignored | skips the two bytes |
+
+DLE STX and DLE SOH are structural. ASCII's own supplementary controls
+(DLE `0`, DLE `;`) were spelled with graphic characters, and future hints
+or annotations would be too. New sequences come only by spec revision.
+
+A reader may offer a strict mode that rejects anything unknown of either
+class. The default is as in the table: forward compatibility by default,
+strictness on request.
+
+**Inside a literal region nothing unknown is ignorable.** There, a DLE
+sequence stands for data: two bytes on the wire for one byte of the
+value. A reader meeting one it does not know cannot produce the right
+value by skipping it, keeping it, or guessing, and a conforming writer
+never emits one, so it is either damage or a newer spec. Reject it.
+
 ### Lists and nested data
 
 Inside a nested level the format's own shapes apply, and nothing new is
@@ -327,21 +353,18 @@ Verified defects in the reference implementation, and how each ends:
    that bare text there is an error for now.
 2. **Reference paths.** `␅␂tags␟001␟label␃` is ENQ followed by a nested
    level whose one record holds the segments. Confirm that reading.
-3. **Policy for reserved DLE sequences.** How one is assigned later, and
-   whether readers reject or skip an unknown one. DLE SOH is the second
-   defined sequence.
-4. **Is the literal heading canonical?** If a producer may add or omit it
+3. **Is the literal heading canonical?** If a producer may add or omit it
    freely, one value has two spellings and two hashes. The clean choices
    are always, never, or always once the encoded size passes a fixed
    threshold.
-5. **Pretty rendering.** Whether `c0fmt` and the editor show the pair as
+4. **Pretty rendering.** Whether `c0fmt` and the editor show the pair as
    two glyphs or as one quotation glyph.
-6. **Torn tails ending in a lone DLE.** The stream repair rule already
+5. **Torn tails ending in a lone DLE.** The stream repair rule already
    covers a tail torn between a DLE and its escaped byte; restate it for
    sequences.
-7. **The shipped list API.** Keep `list_field` / `list` with the record
+6. **The shipped list API.** Keep `list_field` / `list` with the record
    form, or drop them in favour of ordinary nested tables.
-8. **Rollout.** Whether this replaces the earlier two-stage plan with a
+7. **Rollout.** Whether this replaces the earlier two-stage plan with a
    single change; it needs no new codes, so the canonical-form concern
    that motivated two stages does not arise.
 
