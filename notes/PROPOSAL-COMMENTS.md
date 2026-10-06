@@ -193,21 +193,23 @@ carriage return and their kin, which editors rewrite), NUL (breaks C
 strings and makes tools treat a file as binary), ESC, and DC1/DC3
 (terminals and serial links act on them).
 
+## Decided (2026-10-06)
+
+- **Framing cannot be commented out.** A BEL before EOT, ETB, or SYN does
+  not neutralise it; those codes mean what they mean everywhere.
+- **Comments are allowed inside nested levels,** between the records of a
+  nested table, exactly as at the top.
+- **Stripping is a tool option.** No profile may require comment-free
+  input.
+
 ## Open Questions
 
 1. **The terminating set.** Presumably FS, GS, RS, SOH, SYN, EOT, ETB, and
    BEL; and ETX when the comment is inside a nested scope.
-2. **Neutralising framing.** May a BEL be put before EOT, ETB, or SYN to
-   comment those out? Commenting out an ETB un-commits a block.
-3. **Nested scopes.** Are comments allowed between the records of a table
-   nested in STX/ETX? The hierarchy resets inside a scope, which suggests
-   yes.
-4. **Stream logs.** The ETB digest covers a block's bytes exactly, which
+2. **Stream logs.** The ETB digest covers a block's bytes exactly, which
    would include comments, while the content hash excludes them. Two
    different hashes, or no comments inside committed blocks?
-5. **C0-DIFF.** A comment there would run to the next FS or GS.
-6. **Stripping.** Is stripping purely a tool option, or may a profile
-   require comment-free input?
+3. **C0-DIFF.** A comment there would run to the next FS or GS.
 
 ## Feedback
 
