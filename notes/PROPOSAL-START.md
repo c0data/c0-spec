@@ -260,16 +260,26 @@ dialogue and have no role in a document at rest.
   implies EM. (Noted, not designed: a long-lived log may emit a fresh SYN
   and heading periodically as a resynchronisation point, as BISYNC did.)
 
-## Open Questions
+## Decided (2026-10-06, second pass)
 
-1. **"Warn loudly", precisely.** What a library does (an error value, a
-   callback, a strict mode) versus a command-line tool.
-2. **The first key set.** Confirm `shape` and `version` and their values.
-   Should the non-diff, non-stream shapes be declarable as hints for
-   converters (tabular to CSV, document to Markdown)?
-3. **Unknown values.** An unknown `shape` or `version` probably means
-   refuse rather than warn.
-4. **C0-DIFF.** Must a diff carry `shape diff`, or is it only recommended?
+- **Two levels of warning.** A *warning* means the input is legal but not
+  what a careful writer produces: layout where canonical form has none,
+  an empty literal region, heading keys out of canonical order. A *loud
+  warning* means the input may not be what it claims to be: no SYN at
+  the start of a file, no EOT at its end, a heading key or a `shape` or
+  `version` value the reader does not know. A library never fails on
+  either; it parses and exposes the warning. A command-line tool prints
+  it. A strict mode, off by default, turns loud warnings into errors and
+  leaves ordinary warnings alone.
+- **Nothing in the heading causes a refusal by itself.** An unknown
+  `shape` or `version` value is a loud warning, not a refusal: under
+  additive versions an older reader reads what it understands, and what
+  it cannot becomes an error at the byte where it occurs.
+- **First keys:** `shape` and `version` as proposed. The other shapes
+  (tabular, document, key-value) may be given as hints; converters may
+  use them, nothing else may act on them.
+- **Diffs** should carry `shape␟diff`, not must. A diff tool accepts an
+  unspecified shape and refuses a contradicting one.
 
 ## Feedback
 
