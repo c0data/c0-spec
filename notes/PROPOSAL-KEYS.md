@@ -12,7 +12,6 @@ records, at the same level of the hierarchy:
 
     ␞Admin␟Editor␟User                 a list: plain units
     ␞␁host␟localhost␁port␟5432          a map: keyed units
-    ␞lamp␟␁width␟40␁height␟20           mixed: positional, then keyed
 
 The table header C0DATA already has is the same marking, hoisted: SOH
 after a group label means "these keys apply to every record below".
@@ -58,7 +57,7 @@ follows".
 
 A record is RS followed by units. A unit is one of:
 
-- a **value**: plain, a literal region, or a nested level;
+- a **value**: plain, text, or a nested level;
 - a **keyed unit**: SOH, a key, US, a value.
 
 SOH both separates the unit from the one before it and marks it: no US
@@ -66,16 +65,26 @@ precedes an SOH. A key is a name under the same rules as a header name,
 no control codes and no edge spaces. The value may be empty. A key with
 nothing after it, at the end of a record, has an empty value.
 
-Plain and keyed units may be mixed in one record. Positional units are
-counted as today, N separators making N plus one units, with SOH
-counting as a separator.
+A record is positional or keyed, never mixed (decided 2026-10-06): an
+index lookup addresses a list, a key lookup a map, and nothing has to
+say what an index returns from a map.
+
+**SOH is an introducer, not a separator.** C0DATA is start-delimited: RS
+does not separate records, it begins one, and the next RS ends the
+previous record by beginning another. SOH is the same kind of thing one
+level down. It begins a keyed unit, heading then text, and the next SOH
+ends the previous one by beginning another. US is the only true
+separator in the format and keeps that role everywhere: within a keyed
+unit it divides the key from the value. Two alternatives were weighed
+and rejected: a US between keyed units (`␁k␟v␟␁k␟v`), under which US
+would alternate in meaning; and a colon-like code between key and value
+(`k⁝v␟k⁝v`), JSON's shape, for which no code with a fitting name exists.
 
 ### Hoisted keys
 
 SOH directly after a group label, or at the top of a log, carries the
-keys for every record that follows, exactly as today. A record under
-hoisted keys may still carry keyed units of its own; those name the
-unit they precede and do not shift the positional ones.
+keys for every record that follows, exactly as today. Records under
+hoisted keys are positional.
 
 ### Maps and canonical form
 
@@ -95,7 +104,7 @@ exception in DESIGN.md's canonical section goes away.
 
 - **Nested maps**: a nested level holding a map record.
 
-      ␞Alice␟␂␞␁street␟1 Main␁city␟Springfield␃
+      ␞Alice␟␏␞␁street␟1 Main␁city␟Springfield␘
 
 - **The JSON converter**: an object is a keyed record, an array a plain
   record, with no guessing. A headerless two-column group is what it
@@ -108,7 +117,7 @@ rule underneath all of them: **a code is followed by its own text, parts
 separated by US, ending at the next control code.** Labels after FS and
 GS, hoisted keys after SOH, the payload after ETB, the heading after SYN
 are all that rule. The one exception is a code that sits inside a field,
-where a US would end the field: there its text is fenced in STX … ETX.
+where a US would end the field: there its text is fenced as text, STX … ETX.
 ENQ is the only such code, so a bracket directly after ENQ is ENQ's text
 and not a nested level. Position tells them apart, and the two can never
 occupy the same place. Keyed units are the same rule with a mark.
@@ -128,10 +137,8 @@ occupy the same place. Keyed units are the same rule with a mark.
 
 1. **Duplicate keys outside canonical form.** Last wins, first wins, or
    an error.
-2. **Hoisted and inline keys together.** Confirm the rule above: an
-   inline keyed unit does not consume a positional slot.
-3. **Pretty alignment** of keyed records in `c0fmt`'s aligned modes.
-4. **The converter's reverse guess.** Whether a headerless two-column
+2. **Pretty alignment** of keyed records in `c0fmt`'s aligned modes.
+3. **The converter's reverse guess.** Whether a headerless two-column
    group should still export as a JSON object for compatibility, or now
    as an array of pairs.
 

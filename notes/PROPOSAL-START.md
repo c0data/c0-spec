@@ -76,10 +76,10 @@ content behind it. Hence both halves: a required opening and a heading.
 ### The marker
 
 A document begins with a single SYN. A raw SYN can occur nowhere else:
-every value byte below 0x20 is DLE-escaped and names may not contain
-control bytes at all. So an unescaped SYN is always a document start, and
-a reader can find document starts from any offset (with the usual
-one-byte DLE lookbehind).
+outside text no control code is data, and inside text SYN is one of the
+six codes that take a DLE (`PROPOSAL-LITERAL.md`). So an unescaped SYN
+is always a document start, and a reader can find document starts from
+any offset (with the usual one-byte DLE lookbehind).
 
 One SYN, never two. The historical doubling solved bit-level
 synchronisation, which byte-aligned media do not need; doubling already
@@ -94,7 +94,7 @@ after the first FS label would belong to that file, not to the document.
 The heading is the text after SYN, up to the first FS, GS, RS, EOT, ETB,
 or BEL. It is a record with SYN in place of RS, written entirely in
 keyed units: SOH, a key, US, a value (`PROPOSAL-KEYS.md`). Values may be
-plain, literal regions, or nested levels.
+plain, text, or nested levels.
 
     [SYN][SOH]shape[US]stream[RS]alice[US]100[ETB]
 
@@ -163,7 +163,7 @@ difference. Exact behaviour is an open question below.
 SYN is 0x16, which TLS also uses as the first byte of a handshake record.
 A TLS record continues with 0x03 (its protocol version; DTLS continues
 with 0xFE). In C0DATA the byte after SYN can never be 0x03: that value is
-ETX, and a closing bracket cannot directly follow SYN. **File-type and
+ETX, which closes text, and text cannot open with its own close. **File-type and
 MIME detectors must therefore match two bytes, not one.**
 
 ### Sequences
@@ -180,8 +180,8 @@ the previous document's EOT. `EOT` followed by `ENQ` remains reserved (see
 - Readers written before this change reject SYN as an unassigned code.
   That is a loud failure, not a misreading.
 
-No valid existing value changes meaning: the escape set is frozen at "all
-bytes below 0x20", so raw SYN never appeared in conforming data. C0DATA is
+No valid existing value changes meaning: no byte below 0x20 was ever
+raw data, so raw SYN never appeared in conforming data. C0DATA is
 pre-1.0 and unadopted; this is the moment to make such a change.
 
 ## History
@@ -264,7 +264,7 @@ dialogue and have no role in a document at rest.
 
 - **Two levels of warning.** A *warning* means the input is legal but not
   what a careful writer produces: layout where canonical form has none,
-  an empty literal region, heading keys out of canonical order. A *loud
+  an empty text, heading keys out of canonical order. A *loud
   warning* means the input may not be what it claims to be: no SYN at
   the start of a file, no EOT at its end, a heading key or a `shape` or
   `version` value the reader does not know. A library never fails on

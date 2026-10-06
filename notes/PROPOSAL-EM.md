@@ -17,9 +17,9 @@ key, `blob`, whose value is a table with one row per blob: name, offset,
 length, and an optional hash. That table is the whole index; there is no
 index group in the body.
 
-    ␖␁blob␟␂␁name␟offset␟length␟hash
+    ␖␁blob␟␏␁name␟offset␟length␟hash
       ␞lamp␟0␟3072000␟sha256:cd34…
-      ␞desk␟3072000␟1900000␟sha256:ef56…␃
+      ␞desk␟3072000␟1900000␟sha256:ef56…␘
     ␜scene
     ␝props␁name␟image
     ␞lamp␟lamp
@@ -39,12 +39,12 @@ serve three needs, and this proposal is the middle one:
 
 | Need | Mechanism | What it gives |
 |---|---|---|
-| Images in transit, consumed whole | literal region (`PROPOSAL-LITERAL.md`) | inline, about 1.5% overhead, one pass to read |
+| Images in transit, consumed whole | text (`PROPOSAL-LITERAL.md`) | inline, about 2.3% overhead, one pass to read |
 | A single file holding a document and its images | **trailing blob after EM** | raw bytes, zero-copy, memory-mappable, verifiable |
 | A store of hundreds of megabytes | files beside the data, referenced (DESIGN.md sidecar pattern) | everything the filesystem already does |
 
-A literal region can never be zero-copy at image sizes, since a 3 MB
-image always contains some of the four escaped byte values, and a reader
+Text can never be zero-copy at image sizes, since a 3 MB image always
+contains some of the six escaped byte values, and a reader
 must scan it to find its end. The trailing blob has neither cost. The
 price is that it is out of line and write-once.
 
@@ -170,7 +170,7 @@ padding. The spec stays silent beyond that note.
 
 - **Start marker:** the declaration lives in the SYN heading, which is
   the first reason that heading needed to exist.
-- **Literal regions:** complementary, not competing. Literal for transit,
+- **Text:** complementary, not competing. Text for transit,
   EM for packaging.
 - **Appendix:** superseded in its framing; its index columns survive as
   the keys of the `blob` table, and its reasoning on hashing and padding

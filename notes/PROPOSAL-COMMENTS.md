@@ -60,7 +60,7 @@ transmission is a separate, optional step.
 2. A structural code immediately after the BEL belongs to the comment and
    has no effect.
 3. The comment then runs to the next record-level code, scanned the way a
-   record is: DLE pairs and STX/ETX scopes are skipped.
+   record is: text and nested levels are skipped whole.
 
 So `[BEL][RS]port[US]5432` is a commented-out record,
 `[BEL][GS]server` a commented-out group line,
@@ -122,8 +122,9 @@ property that structure is determinable locally.
 ### Comment text
 
 Comment text follows the rules of a value: bytes below 0x20 are
-DLE-escaped. To mention a control code literally in a note it must be
-escaped, or it will be taken as the real thing and end the comment.
+data. To mention a control code in a note the note must be text,
+STX … ETX, or the code will be taken as the real thing and end the
+comment.
 
 ### Hashing
 
@@ -212,12 +213,12 @@ strings and makes tools treat a file as binary), ESC, and DC1/DC3
 - **A comment has the extent of a record** (2026-10-06). It ends where
   an element of the enclosing shape ends, and is scanned the way that
   element is: in C0DATA at the next FS, GS, RS, SOH, SYN, EOT, ETB, or
-  BEL, or at the ETX that closes a nested level it sits in; in a C0-DIFF
+  BEL, or at the CAN that closes a nested level it sits in; in a C0-DIFF
   at the next FS or GS. What does not end it: US, which is content; a
-  nested level, skipped whole; DLE sequences, so a literal region inside
+  nested level, skipped whole; text, skipped whole, so a text inside
   a comment holds anything, control codes included; ENQ and SUB. A BEL
   before a nested value comments out that value through its matching
-  ETX, `␞Alice␟␇␂␞Admin␟Editor␃`, as a consequence of the prefix rule;
+  CAN, `␞Alice␟␇␏␞Admin␟Editor␘`, as a consequence of the prefix rule;
   no general bracketed comment is added.
 
 ## Feedback
