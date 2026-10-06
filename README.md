@@ -16,9 +16,9 @@ depends on.
 - `vectors/README.md` — the fixture schema.
 - `notes/` — design notes and proposals (non-normative): alternate
   design sketches, the schema-system proposal, and the 2026-10 proposals
-  for a document start marker (SYN), comments (BEL), and literal regions
-  (DLE transparent text). Nothing in `notes/` is adopted until it appears
-  in DESIGN.md.
+  for a document start marker (SYN), comments (BEL), literal regions
+  (DLE transparent text), keyed units (SOH marks a key), and a trailing
+  blob (EM). Nothing in `notes/` is adopted until it appears in DESIGN.md.
 
 ## Using the vectors
 

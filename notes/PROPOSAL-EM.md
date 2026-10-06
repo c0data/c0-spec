@@ -12,17 +12,18 @@ it, to the end of the container, is one raw blob: no escapes, no framing,
 no size needed to find its end, because the end of the container is its
 end. Scanning stops at EM and never resumes.
 
-The document's heading (`PROPOSAL-START.md`) carries the blob's size and
-hash as checks. Several blobs share the region and are addressed by an
-ordinary index group of offsets, as `PROPOSAL-APPENDIX.md` designed.
+The document's heading (`PROPOSAL-START.md`) declares the blob under one
+key, `blob`, whose value is a table with one row per blob: name, offset,
+length, and an optional hash. That table is the whole index; there is no
+index group in the body.
 
-    ␖blob␟3072000␟blob-hash␟sha256:cd34…
+    ␖␁blob␟␂␁name␟offset␟length␟hash
+      ␞lamp␟0␟3072000␟sha256:cd34…
+      ␞desk␟3072000␟1900000␟sha256:ef56…␃
     ␜scene
     ␝props␁name␟image
-    ␞lamp␟␅␂␞images␟lamp␃
-    ␝images␁name␟offset␟length
-    ␞lamp␟0␟3072000
-    ␄␙<3072000 raw bytes to the end of the file>
+    ␞lamp␟lamp
+    ␄␙<4972000 raw bytes to the end of the file>
 
 In ASCII, EM is "end of medium": the end of the used or wanted portion
 of data on a tape or other medium. That is exactly its job here. It
@@ -84,37 +85,41 @@ Every byte after EM to the end of the container. Raw: no escapes, no
 framing, no layout, no interpretation. A container with EM and nothing
 after it has an empty blob.
 
-### Checks in the heading
+### The declaration in the heading
 
-The document that owns the blob declares it in its SYN heading, with two
-proposed keys:
+The document that owns the blob declares it with one key:
 
 | Key | Value |
 |---|---|
-| `blob` | the blob's size in bytes, canonical decimal |
-| `blob-hash` | `<algorithm>:<hex>` over the blob's bytes, optional |
+| `blob` | a nested table, keys hoisted: `name`, `offset`, `length`, optional `hash` |
 
-A reader compares the size to what the container actually holds past EM.
-A shortfall is truncation; a surplus is trailing garbage. A hash mismatch
-is corruption. Both are known before any blob byte is trusted. The
-heading sits at the front, so the writer must know size and hash before
-writing the document; for a file written at rest that is no burden.
-
-The size is a check, not framing. A reader that has no heading still
-knows where the blob ends.
-
-### Several blobs: the index group
-
-Carried over from `PROPOSAL-APPENDIX.md`. An ordinary group, any name,
-with rows of `name`, `offset`, `length`, and an optional per-blob `hash`.
 Offsets are relative to the first byte after EM. Rows may overlap, may
-leave gaps for alignment, and may be zero length. Fields elsewhere point
-at a blob with an ordinary reference to its row. Resolving a row to bytes
-is a library operation.
+leave gaps for alignment, and may be zero length. A container with one
+image is one row.
 
-The index group's name is the application's choice. The heading may
-name it (`blob-index`, say) so tools can find it without a convention;
-that key is an open question.
+The checks a reader makes before trusting any blob byte: the container
+must hold at least the largest offset plus length past EM, or the blob
+is truncated; each row's hash, if present, must match its bytes. The
+heading sits at the front, so the writer must know the sizes and hashes
+before writing the document; for a file written at rest that is no
+burden.
+
+Declaring the blob up front is what makes its absence detectable: a
+container cut off before EM still promised a blob in its heading. Facts
+carried on EM itself were considered and rejected for that reason, and
+because they need a terminator ahead of raw bytes.
+
+An earlier draft had three keys (`blob` size, `blob-hash`, `blob-index`)
+plus an index group in the body. The group's rows and the keys described
+the same thing in two shapes, so the group moved into the heading and
+the keys collapsed into it.
+
+### Naming a blob from the data
+
+A field that refers to a blob holds its name, `lamp`. The application
+asks the library for the blob by name, as it would for any value it
+understands. No reference path reaches into the heading, and nothing is
+named by convention.
 
 ### Identity
 
@@ -163,27 +168,21 @@ padding. The spec stays silent beyond that note.
 
 ## Relationship to other proposals
 
-- **Start marker:** the checks live in the SYN heading, which is the
-  first reason that heading needed to exist.
+- **Start marker:** the declaration lives in the SYN heading, which is
+  the first reason that heading needed to exist.
 - **Literal regions:** complementary, not competing. Literal for transit,
   EM for packaging.
-- **Appendix:** superseded in its framing; everything about the index,
-  references, hashing, and padding carries over.
+- **Appendix:** superseded in its framing; its index columns survive as
+  the keys of the `blob` table, and its reasoning on hashing and padding
+  carries over.
 - **DESIGN.md** currently reserves EOT followed by ENQ for the old frame.
   If EM is adopted, that reservation can be released.
 
 ## Open Questions
 
-1. **Key names** in the heading: `blob`, `blob-hash`, and whether a key
-   names the index group.
-2. **Ownership in a multi-document container:** the last document, as
+1. **Ownership in a multi-document container:** the last document, as
    proposed, or the first.
-3. **Direct ranges.** The appendix proposal allowed a reference to carry
-   an offset and length without a row. Reference paths are themselves
-   under review in `PROPOSAL-LITERAL.md`; settle them together.
-4. **Alignment:** silent, as proposed, or a recommended page size.
-5. **Whether the index group is required** when the heading declares a
-   single blob. A one-image container could do without it.
+2. **Alignment:** silent, as proposed, or a recommended page size.
 
 ## Feedback
 

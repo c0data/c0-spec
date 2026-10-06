@@ -20,7 +20,7 @@ In Lisp terms: `( … )` against `" … "`. One is read, the other is quoted.
 
 Outside a literal region a control code is never data, and DLE never
 stands alone: DLE STX opens a literal, DLE SOH opens an optional heading
-for one (its size and hash), and every other DLE sequence is reserved.
+for one (its size), and every other DLE sequence is reserved.
 Per-byte escaping goes away. No new codes are assigned.
 
 In pretty form:
@@ -121,41 +121,38 @@ there is no need, since nothing inside is interpreted.
 A literal region is a whole value. It cannot be part of a plain value
 (`abc␐␂ x ␐␃def` is malformed).
 
-### Literal heading: size and hash
+### Literal heading: the size
 
 ASCII's message shape was heading, then text: SOH, STX, ETX. A literal
 region may carry the same shape, with one reserved DLE sequence:
 
-    [DLE][SOH] size [US] hash [DLE][STX] bytes… [DLE][ETX]
+    [DLE][SOH] size [DLE][STX] bytes… [DLE][ETX]
 
-    ␐␁3072000␟sha256:ab12…␐␂ … ␐␃
+    ␐␁3072000␐␂ … ␐␃
 
-DLE SOH opens the heading. It runs up to the DLE STX that opens the body
-and holds fields separated by US. It is optional; a literal without one
-is exactly the form above.
+DLE SOH opens the heading, which holds one thing, the **size**: the
+encoded length on the wire, from the byte after DLE STX to the byte
+before DLE ETX, escapes included, in canonical decimal. It is optional.
 
-- **Size** is the encoded length on the wire, from the byte after DLE STX
-  to the byte before DLE ETX, escapes included, in canonical decimal. It
-  is a **hint**: a reader may jump to that offset and must find DLE ETX
-  there. If it does not, the hint is wrong and the reader scans instead.
-  Nothing depends on the number, so the scan rule is untouched.
-- **Hash** is of the decoded bytes, the value itself, written as
-  `<algorithm>:<hex>` like an ETB payload, so it equals the hash of the
-  file the value came from. Optional; the size may stand alone.
-- **The writer pays once:** counting the four escaped values and hashing
-  is one pass over bytes it already holds. A streaming writer that does
-  not have the whole value omits the heading.
-
-What the heading does not hold: anything the application cares about,
-such as a media type. That is data and belongs in a neighbouring field.
+The size is a **hint**: a reader may jump to that offset and must find
+DLE ETX there. If it does not, the hint is wrong and the reader scans
+instead. Nothing depends on the number, so the scan rule is untouched.
+The writer counts the four escaped values in one pass over bytes it
+already holds; a streaming writer that does not have the whole value
+omits the heading.
 
 **The heading is metadata, outside the hash** (decided 2026-10-06). Like
 an ETB payload or a comment, it says something about the value rather
 than being part of it, so the canonical unit is extracted with the
 heading left out: DLE SOH up to DLE STX is skipped, with the other
 framing. A producer may add or omit it and the value hashes the same.
-The size stays a hint, verified against DLE ETX; the hash in the heading
-is a check, with the standing of an ETB digest, not an identity.
+
+**No hash here** (decided 2026-10-06). In a log the block's ETB digest
+already covers the value; at rest the document's content hash does. A
+hash that identifies the value for the application is data, and in a
+neighbouring field it makes the record commit to the value's content.
+The rule that falls out: a hash belongs in a heading only where nothing
+else covers the bytes, which is the trailing blob and not this.
 
 The heading pays only for large values: it lets a reader reach a small
 field that sits after a large one without scanning the large one (a
@@ -207,6 +204,9 @@ needed:
 | a list of lists, or a table | `␂␞1␟2␞3␟4␃`, several records |
 | a table with named columns | `␂␁street␟city␞1 Main␟Springfield␃` |
 
+A nested map is a record of keyed units (`PROPOSAL-KEYS.md`):
+`␂␞␁street␟1 Main␁city␟Springfield␃`.
+
 **The RS is written, never assumed** (decided 2026-10-05). Three reasons:
 every other opening code owns the text that follows it, so the bare
 position after STX is kept for a label; an assumed RS would make the
@@ -216,21 +216,26 @@ would have two spellings. The cost is one byte per list.
 The ordinary table reader reads every row of the table above unchanged,
 which is the test that matters.
 
-### References (decided 2026-10-06)
+### References (decided 2026-10-06, revised the same day)
 
-A reference is ENQ followed by a value. A plain value names a group:
+A reference is ENQ followed by its own text. A plain name is a group:
 
     ␅tags
 
-A nested value is a path: one record, one field per segment, with its RS
-written like any nested list:
+A path is the segments separated by US. Because a reference sits inside
+a field, where a US would end the field, the text is fenced in STX … ETX:
 
-    ␅␂␞tags␟001␟label␃
+    ␅␂tags␟001␟label␃
 
-A reference is hashed as the bytes it is written in, the pointer and
-not the thing pointed at, so this spelling is permanent for identity.
-Chaining ENQs (`␅tags␅001`) was considered and rejected: the same bytes
-could mean one path or two references in one field.
+That is the form the spec has always had. A bracket directly after ENQ
+is ENQ's text; a bracket at the start of a field is a nested level. The
+two positions never coincide, so no rule is bent (see "The code-and-text
+rule" in `PROPOSAL-KEYS.md`). A draft that made the path a nested record
+with an RS was dropped for adding a byte to every reference for no gain.
+
+A reference is hashed as the bytes it is written in, the pointer and not
+the thing pointed at. Chaining ENQs (`␅tags␅001`) was rejected: the same
+bytes could mean one path or two references in one field.
 
 ### Framing cuts through
 
@@ -358,6 +363,8 @@ Verified defects in the reference implementation, and how each ends:
 - **Trailing blob** (`PROPOSAL-EM.md`): literal regions carry binary
   inline, with escapes and one pass; a trailing blob after EM carries it
   raw and zero-copy. They are complementary: transit versus packaging.
+- **Keyed units** (`PROPOSAL-KEYS.md`): maps inside a nested level, and
+  the rule that a bracket after ENQ is ENQ's text.
 - **Schema**: the enum example `␞enum␟␂␟admin␟editor␟viewer␃` becomes
   `␞enum␟␂␞admin␟editor␟viewer␃`.
 

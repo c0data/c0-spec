@@ -6,8 +6,8 @@
 ## Summary
 
 A C0DATA document begins with **SYN (0x16)**. Text directly after SYN is
-the document's **heading**: one row of key/value pairs, separated by US,
-holding what a reader must know *before* reading. A bare SYN is a complete
+the document's **heading**: keyed units, each SOH, key, US, value
+(`PROPOSAL-KEYS.md`), holding what a reader must know *before* reading. A bare SYN is a complete
 header. Readers still parse input that lacks SYN when they can, but warn
 loudly.
 
@@ -18,9 +18,9 @@ Three separate documents, in pretty form (SYN is `␖`):
 
     ␖␜mydb␝users␁name␟amount␞Alice␟100
 
-    ␖shape␟stream␞alice␟100␗␞bob␟200␗
+    ␖␁shape␟stream␞alice␟100␗␞bob␟200␗
 
-    ␖shape␟diff␜foo.txt␝Hello ␟world␚universe
+    ␖␁shape␟diff␜foo.txt␝Hello ␟world␚universe
 
 The first has no heading. The second declares itself a stream log, the
 third a C0-DIFF. Each has exactly one SYN.
@@ -91,29 +91,28 @@ after the first FS label would belong to that file, not to the document.
 
 ### The heading
 
-The heading is the text after SYN, up to the first FS, GS, RS, SOH, EOT,
-ETB, or BEL. It is shaped like a record with SYN in place of RS: fields
-separated by US, values DLE-escaped, nested scopes and list fields
-allowed. Its fields alternate **key, value, key, value**:
+The heading is the text after SYN, up to the first FS, GS, RS, EOT, ETB,
+or BEL. It is a record with SYN in place of RS, written entirely in
+keyed units: SOH, a key, US, a value (`PROPOSAL-KEYS.md`). Values may be
+plain, literal regions, or nested levels.
 
-    [SYN]shape[US]stream[RS]alice[US]100[ETB]
+    [SYN][SOH]shape[US]stream[RS]alice[US]100[ETB]
 
-    [SYN]version[US]2[US]shape[US]diff[FS]foo.txt[GS]…
+    [SYN][SOH]version[US]2[SOH]shape[US]diff[FS]foo.txt[GS]…
 
-Keys are names (no control bytes). A key appears at most once. A SYN
-followed immediately by a structural code is the empty heading.
+A SYN followed immediately by a structural code is the empty heading.
+Keys are names. In canonical form they are unique and sorted bytewise;
+readers accept any order.
 
-The spec's usual key-value idiom is one record per entry (`[RS]key[US]
-value`). It cannot be used here: an RS in the heading would be
-indistinguishable from the first record of the body. So the heading uses
-no RS; all pairs sit in one row.
+The SOH after SYN is a key mark, not a hoisted header: a hoisted header
+follows a group label or opens a log, and a heading is neither. After
+the heading, a standalone SOH keeps its meaning for a log:
 
-SOH is not used to introduce the heading. A leading SOH already means
-field names for the bare records that follow (stream logs use it), so
-`[SYN][SOH]a[US]b[RS]…` would be ambiguous, and SOH names are identifiers
-that cannot carry escaped values. After a heading, SOH keeps its meaning:
+    [SYN][SOH]shape[US]stream[SOH]name[US]amount[RS]alice[US]100[ETB]
 
-    [SYN]shape[US]stream[SOH]name[US]amount[RS]alice[US]100[ETB]
+An earlier draft spelled the pairs as alternating fields with no mark,
+because an RS in the heading would be mistaken for the body's first
+record. Keyed units remove the need.
 
 ### Keys
 
@@ -129,6 +128,10 @@ The key set belongs to the spec. Proposed for the first version:
 - **`version`** — **absent means 1**, permanently. Every document without
   a version is version 1 by definition, so a stable format never pays for
   the field. Only an incompatible future revision must announce itself.
+
+- **`blob`** — present only when a trailing blob follows EM
+  (`PROPOSAL-EM.md`). Its value is a nested table, keys hoisted, one row
+  per blob: `name`, `offset`, `length`, and an optional `hash`.
 
 Reserved for later design: a schema reference and a manifest.
 
@@ -266,8 +269,7 @@ dialogue and have no role in a document at rest.
    converters (tabular to CSV, document to Markdown)?
 3. **Unknown values.** An unknown `shape` or `version` probably means
    refuse rather than warn.
-4. **Key order.** Free, or sorted as the map-canonical rule would have it.
-5. **C0-DIFF.** Must a diff carry `shape diff`, or is it only recommended?
+4. **C0-DIFF.** Must a diff carry `shape diff`, or is it only recommended?
 
 ## Feedback
 
