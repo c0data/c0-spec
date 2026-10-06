@@ -225,23 +225,35 @@ dialogue and have no role in a document at rest.
 - **Comments** (`PROPOSAL-COMMENTS.md`): BEL ends the heading like any
   other record-level code.
 
+## Decided (2026-10-06)
+
+- **SYN and the whole heading are outside the hash.** The canonical
+  document unit is unchanged: the body, from its first byte to its last.
+  SYN is framing like EOT, and the heading's keys are metadata, with no
+  exceptions: `shape` says how to read the bytes, not what they are; a
+  schema says how to interpret them. The same stream transmitted without
+  its schema is still the same stream.
+- **`version` is outside too,** which rests on a principle to be adopted
+  at 1.0: **versions are additive.** A later version may add forms but
+  may never change the meaning of bytes that were valid under an earlier
+  one, so identical bytes mean identical data under any version and one
+  id suffices. Before 1.0 that promise cannot be made, and hashes may
+  change between revisions.
+
 ## Open Questions
 
-1. **Hashing.** Are SYN and the heading inside or outside the canonical
-   unit? The heading resembles the ETB payload, which is outside. But a
-   `shape` or schema entry changes what the data means.
-2. **Where SYN is required.** Files and messages, yes. Records and groups
+1. **Where SYN is required.** Files and messages, yes. Records and groups
    hashed on their own are slices and stay bare. Stream logs: one SYN at
    the start of the file, and is the heading itself committed with ETB?
-3. **"Warn loudly", precisely.** What a library does (an error value, a
+2. **"Warn loudly", precisely.** What a library does (an error value, a
    callback, a strict mode) versus a command-line tool.
-4. **The first key set.** Confirm `shape` and `version` and their values.
+3. **The first key set.** Confirm `shape` and `version` and their values.
    Should the non-diff, non-stream shapes be declarable as hints for
    converters (tabular to CSV, document to Markdown)?
-5. **Unknown values.** An unknown `shape` or `version` probably means
+4. **Unknown values.** An unknown `shape` or `version` probably means
    refuse rather than warn.
-6. **Key order.** Free, or sorted as the map-canonical rule would have it.
-7. **C0-DIFF.** Must a diff carry `shape diff`, or is it only recommended?
+5. **Key order.** Free, or sorted as the map-canonical rule would have it.
+6. **C0-DIFF.** Must a diff carry `shape diff`, or is it only recommended?
 
 ## Feedback
 
