@@ -1,6 +1,8 @@
 # Proposal: Binary Appendix
 
-**Status:** Deferred — designed in full, not adopted
+**Status:** Superseded in part by `PROPOSAL-EM.md` (2026-10-05), which
+replaces the EOT+ENQ frame and the declared size with EM, end of medium.
+The index group, reference forms, and integrity reasoning below carry over.
 **Date:** 2026-09-23
 
 ## Why deferred

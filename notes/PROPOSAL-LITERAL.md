@@ -19,8 +19,9 @@ C0DATA gets two kinds of brackets, each with one meaning:
 In Lisp terms: `( … )` against `" … "`. One is read, the other is quoted.
 
 Outside a literal region a control code is never data, and DLE never
-stands alone: DLE STX opens a literal, and every other DLE sequence is
-reserved. Per-byte escaping goes away. No new codes are assigned.
+stands alone: DLE STX opens a literal, DLE SOH opens an optional heading
+for one (its size and hash), and every other DLE sequence is reserved.
+Per-byte escaping goes away. No new codes are assigned.
 
 In pretty form:
 
@@ -120,6 +121,39 @@ there is no need, since nothing inside is interpreted.
 A literal region is a whole value. It cannot be part of a plain value
 (`abc␐␂ x ␐␃def` is malformed).
 
+### Literal heading: size and hash
+
+ASCII's message shape was heading, then text: SOH, STX, ETX. A literal
+region may carry the same shape, with one reserved DLE sequence:
+
+    [DLE][SOH] size [US] hash [DLE][STX] bytes… [DLE][ETX]
+
+    ␐␁3072000␟sha256:ab12…␐␂ … ␐␃
+
+DLE SOH opens the heading. It runs up to the DLE STX that opens the body
+and holds fields separated by US. It is optional; a literal without one
+is exactly the form above.
+
+- **Size** is the encoded length on the wire, from the byte after DLE STX
+  to the byte before DLE ETX, escapes included, in canonical decimal. It
+  is a **hint**: a reader may jump to that offset and must find DLE ETX
+  there. If it does not, the hint is wrong and the reader scans instead.
+  Nothing depends on the number, so the scan rule is untouched.
+- **Hash** is of the decoded bytes, the value itself, written as
+  `<algorithm>:<hex>` like an ETB payload, so it equals the hash of the
+  file the value came from. Optional; the size may stand alone.
+- **The writer pays once:** counting the four escaped values and hashing
+  is one pass over bytes it already holds. A streaming writer that does
+  not have the whole value omits the heading.
+
+What the heading does not hold: anything the application cares about,
+such as a media type. That is data and belongs in a neighbouring field.
+
+The heading pays only for large values: it lets a reader reach a small
+field that sits after a large one without scanning the large one (a
+3 MB image costs about 4 ms to scan), allocate the decoded buffer once,
+and detect truncation before reading.
+
 ### Outside both
 
 Every byte below 0x20 belongs to the format:
@@ -128,9 +162,9 @@ Every byte below 0x20 belongs to the format:
 - tab, line feed and carriage return are **layout codes**: legal next to
   a control code, never data, and an error in the middle of a plain
   value (such a value must be literal);
-- DLE begins a sequence. DLE STX opens a literal region. All other DLE
-  sequences are reserved for supplementary controls, which is what ASCII
-  designed DLE for;
+- DLE begins a sequence. DLE STX opens a literal region; DLE SOH opens a
+  literal heading. All other DLE sequences are reserved for supplementary
+  controls, which is what ASCII designed DLE for;
 - any other code is unassigned and rejected.
 
 A space is data inside a value and layout at its edges. So a plain value
@@ -281,6 +315,9 @@ Verified defects in the reference implementation, and how each ends:
 - **C0-DIFF**: anchors and replacement text that need exactness become
   literal regions. The undecided replace-all notation must not reuse
   either bracket; a reserved DLE sequence is one possible home.
+- **Trailing blob** (`PROPOSAL-EM.md`): literal regions carry binary
+  inline, with escapes and one pass; a trailing blob after EM carries it
+  raw and zero-copy. They are complementary: transit versus packaging.
 - **Schema**: the enum example `␞enum␟␂␟admin␟editor␟viewer␃` becomes
   `␞enum␟␂␞admin␟editor␟viewer␃`.
 
@@ -291,15 +328,20 @@ Verified defects in the reference implementation, and how each ends:
 2. **Reference paths.** `␅␂tags␟001␟label␃` is ENQ followed by a nested
    level whose one record holds the segments. Confirm that reading.
 3. **Policy for reserved DLE sequences.** How one is assigned later, and
-   whether readers reject or skip an unknown one.
-4. **Pretty rendering.** Whether `c0fmt` and the editor show the pair as
+   whether readers reject or skip an unknown one. DLE SOH is the second
+   defined sequence.
+4. **Is the literal heading canonical?** If a producer may add or omit it
+   freely, one value has two spellings and two hashes. The clean choices
+   are always, never, or always once the encoded size passes a fixed
+   threshold.
+5. **Pretty rendering.** Whether `c0fmt` and the editor show the pair as
    two glyphs or as one quotation glyph.
-5. **Torn tails ending in a lone DLE.** The stream repair rule already
+6. **Torn tails ending in a lone DLE.** The stream repair rule already
    covers a tail torn between a DLE and its escaped byte; restate it for
    sequences.
-6. **The shipped list API.** Keep `list_field` / `list` with the record
+7. **The shipped list API.** Keep `list_field` / `list` with the record
    form, or drop them in favour of ordinary nested tables.
-7. **Rollout.** Whether this replaces the earlier two-stage plan with a
+8. **Rollout.** Whether this replaces the earlier two-stage plan with a
    single change; it needs no new codes, so the canonical-form concern
    that motivated two stages does not arise.
 
