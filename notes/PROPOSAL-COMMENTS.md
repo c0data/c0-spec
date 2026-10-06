@@ -209,11 +209,16 @@ strings and makes tools treat a file as binary), ESC, and DC1/DC3
   excludes it) and answer different questions: whether the write landed,
   and what the data is.
 
-## Open Questions
-
-1. **The terminating set.** Presumably FS, GS, RS, SOH, SYN, EOT, ETB, and
-   BEL; and ETX when the comment is inside a nested scope.
-2. **C0-DIFF.** A comment there would run to the next FS or GS.
+- **A comment has the extent of a record** (2026-10-06). It ends where
+  an element of the enclosing shape ends, and is scanned the way that
+  element is: in C0DATA at the next FS, GS, RS, SOH, SYN, EOT, ETB, or
+  BEL, or at the ETX that closes a nested level it sits in; in a C0-DIFF
+  at the next FS or GS. What does not end it: US, which is content; a
+  nested level, skipped whole; DLE sequences, so a literal region inside
+  a comment holds anything, control codes included; ENQ and SUB. A BEL
+  before a nested value comments out that value through its matching
+  ETX, `␞Alice␟␇␂␞Admin␟Editor␃`, as a consequence of the prefix rule;
+  no general bracketed comment is added.
 
 ## Feedback
 
