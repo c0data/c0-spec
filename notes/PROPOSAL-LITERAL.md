@@ -149,6 +149,14 @@ is exactly the form above.
 What the heading does not hold: anything the application cares about,
 such as a media type. That is data and belongs in a neighbouring field.
 
+**The heading is metadata, outside the hash** (decided 2026-10-06). Like
+an ETB payload or a comment, it says something about the value rather
+than being part of it, so the canonical unit is extracted with the
+heading left out: DLE SOH up to DLE STX is skipped, with the other
+framing. A producer may add or omit it and the value hashes the same.
+The size stays a hint, verified against DLE ETX; the hash in the heading
+is a check, with the standing of an ETB digest, not an identity.
+
 The heading pays only for large values: it lets a reader reach a small
 field that sits after a large one without scanning the large one (a
 3 MB image costs about 4 ms to scan), allocate the decoded buffer once,
@@ -343,18 +351,14 @@ Verified defects in the reference implementation, and how each ends:
    that bare text there is an error for now.
 2. **Reference paths.** `␅␂tags␟001␟label␃` is ENQ followed by a nested
    level whose one record holds the segments. Confirm that reading.
-3. **Is the literal heading canonical?** If a producer may add or omit it
-   freely, one value has two spellings and two hashes. The clean choices
-   are always, never, or always once the encoded size passes a fixed
-   threshold.
-4. **Pretty rendering.** Whether `c0fmt` and the editor show the pair as
+3. **Pretty rendering.** Whether `c0fmt` and the editor show the pair as
    two glyphs or as one quotation glyph.
-5. **Torn tails ending in a lone DLE.** The stream repair rule already
+4. **Torn tails ending in a lone DLE.** The stream repair rule already
    covers a tail torn between a DLE and its escaped byte; restate it for
    sequences.
-6. **The shipped list API.** Keep `list_field` / `list` with the record
+5. **The shipped list API.** Keep `list_field` / `list` with the record
    form, or drop them in favour of ordinary nested tables.
-7. **Rollout.** Whether this replaces the earlier two-stage plan with a
+6. **Rollout.** Whether this replaces the earlier two-stage plan with a
    single change; it needs no new codes, so the canonical-form concern
    that motivated two stages does not arise.
 
