@@ -149,8 +149,14 @@ needed:
 | a list of lists, or a table | `␂␞1␟2␞3␟4␃`, several records |
 | a table with named columns | `␂␁street␟city␞1 Main␟Springfield␃` |
 
-The RS is written, not assumed. The ordinary table reader reads every
-row of this table unchanged, which is the test that matters.
+**The RS is written, never assumed** (decided 2026-10-05). Three reasons:
+every other opening code owns the text that follows it, so the bare
+position after STX is kept for a label; an assumed RS would make the
+empty list and a list of one empty string the same bytes; and one list
+would have two spellings. The cost is one byte per list.
+
+The ordinary table reader reads every row of the table above unchanged,
+which is the test that matters.
 
 ### Framing cuts through
 
@@ -280,21 +286,20 @@ Verified defects in the reference implementation, and how each ends:
 
 ## Open Questions
 
-1. **The RS in nested lists.** Written, not assumed — confirm.
-2. **The reserved position after STX.** Reserved for a label; confirm
+1. **The reserved position after STX.** Reserved for a label; confirm
    that bare text there is an error for now.
-3. **Reference paths.** `␅␂tags␟001␟label␃` is ENQ followed by a nested
+2. **Reference paths.** `␅␂tags␟001␟label␃` is ENQ followed by a nested
    level whose one record holds the segments. Confirm that reading.
-4. **Policy for reserved DLE sequences.** How one is assigned later, and
+3. **Policy for reserved DLE sequences.** How one is assigned later, and
    whether readers reject or skip an unknown one.
-5. **Pretty rendering.** Whether `c0fmt` and the editor show the pair as
+4. **Pretty rendering.** Whether `c0fmt` and the editor show the pair as
    two glyphs or as one quotation glyph.
-6. **Torn tails ending in a lone DLE.** The stream repair rule already
+5. **Torn tails ending in a lone DLE.** The stream repair rule already
    covers a tail torn between a DLE and its escaped byte; restate it for
    sequences.
-7. **The shipped list API.** Keep `list_field` / `list` with the record
+6. **The shipped list API.** Keep `list_field` / `list` with the record
    form, or drop them in favour of ordinary nested tables.
-8. **Rollout.** Whether this replaces the earlier two-stage plan with a
+7. **Rollout.** Whether this replaces the earlier two-stage plan with a
    single change; it needs no new codes, so the canonical-form concern
    that motivated two stages does not arise.
 
