@@ -73,9 +73,10 @@ mostly bytes C0DATA does not interpret, and a cleaner frame.
 ### EM
 
 EM is assigned. It appears at most once in a container, after the final
-document. It ends that document as EOT would, so `…␄␙` and `…␙` are both
-legal; the explicit EOT is recommended for symmetry with sequences.
-Nothing after EM is C0DATA.
+document, and it ends that document the way the end of input does. EOT
+is optional at the end of a document already, so `…␄␙` and `…␙` are
+both legal and neither is preferred (decided 2026-10-06). Nothing after
+EM is C0DATA.
 
 ### The blob
 
@@ -173,16 +174,15 @@ padding. The spec stays silent beyond that note.
 
 ## Open Questions
 
-1. **EOT before EM:** required, recommended, or merely allowed.
-2. **Key names** in the heading: `blob`, `blob-hash`, and whether a key
+1. **Key names** in the heading: `blob`, `blob-hash`, and whether a key
    names the index group.
-3. **Ownership in a multi-document container:** the last document, as
+2. **Ownership in a multi-document container:** the last document, as
    proposed, or the first.
-4. **Direct ranges.** The appendix proposal allowed a reference to carry
+3. **Direct ranges.** The appendix proposal allowed a reference to carry
    an offset and length without a row. Reference paths are themselves
    under review in `PROPOSAL-LITERAL.md`; settle them together.
-5. **Alignment:** silent, as proposed, or a recommended page size.
-6. **Whether the index group is required** when the heading declares a
+4. **Alignment:** silent, as proposed, or a recommended page size.
+5. **Whether the index group is required** when the heading declares a
    single blob. A one-image container could do without it.
 
 ## Feedback
