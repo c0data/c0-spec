@@ -1,7 +1,6 @@
 # Proposal: Text and Nesting (STX … ETX, SI … CAN)
 
-**Status:** Draft — core agreed in discussion; whitespace rule and one
-detail open
+**Status:** Draft — core and whitespace rule agreed in discussion
 **Date:** 2026-10-06 (revision 3)
 **Supersedes:** `PROPOSAL-TEXT.md`; and revision 2 of this file, which
 put literal regions on DLE STX … DLE ETX
@@ -144,8 +143,7 @@ only where nothing else covers the bytes, which is the trailing blob
 
 The hierarchy starts over inside. Nested levels nest. A value inside a
 nested level that needs exactness is itself text. Whitespace inside a
-nested level follows whatever rule applies at the top (see "Whitespace",
-open).
+nested level is layout, as at the top.
 
 Text directly after SI, before the first structural code, is reserved
 (open question 1). An empty level, `␏␘`, holds nothing.
@@ -195,7 +193,7 @@ Every byte below 0x20 belongs to the format:
 - DLE begins a sequence. DLE SOH opens a text heading. All other DLE
   sequences are reserved and are errors until a spec revision defines
   them, announced by the heading's `version` key;
-- tab, line feed and carriage return: see "Whitespace", open;
+- tab, line feed and carriage return are layout (see "Whitespace");
 - any other code is unassigned and rejected.
 
 ### Reserved DLE sequences (decided 2026-10-06)
@@ -217,30 +215,34 @@ inside a nested level, or at the top. A reader that meets one while text
 or a level is open knows that block is damaged. The last commit in a log
 can be found by scanning backward from the end.
 
-### Whitespace (OPEN)
+### Whitespace (decided 2026-10-06)
 
-Agreed: inside text every byte is data. Not yet decided, for plain
-values and the space between codes, which of two rules applies:
+One rule, in both forms: **whitespace touching a control code is layout;
+whitespace inside text is data.** Pretty form is compact form plus layout
+plus glyphs, one grammar.
 
-- **Layout in both forms.** Whitespace touching a control code is
-  layout in compact and pretty form alike; tab, LF and CR are layout
-  codes outside text, an error in the middle of a plain value. One
-  grammar, but a value with edge spaces or a line break must be text
-  even in compact form.
-- **Compact is pure data.** Every byte between separators is the value,
-  edge spaces included, as the original spec said; a raw tab, LF or CR
-  in a compact value is an error, needing text. Layout and trimming
-  exist only in pretty form, and the pretty converter strips what
-  compact does not need. Readers never trim. Compact never bloats.
+Outside text, for a plain value:
 
-The second was proposed after the bloat of the first became visible.
+- space, tab, LF and CR next to a control code are layout, in compact
+  and pretty form alike, and are not part of the value;
+- a space anywhere else in the value is data;
+- a tab, LF or CR anywhere else is an error: the value needs to be text.
+
+So a plain value never carries edge whitespace, and `␞Alice ␟Bob` is
+Alice and Bob. A value whose edge spaces matter, or that holds any
+control code, is text. Edge whitespace on a plain value is legal, is not
+canonical, and draws the ordinary warning like any other layout.
+
+Rejected: making compact form pure data, with trimming only in pretty
+form. It would have given the two forms different readings of the same
+bytes, the split behind the original defects, to save two bytes on the
+values that must be text in pretty form anyway.
 
 ### Canonical form
 
 One spelling per value: plain when it can be, text when it must be,
-with DLE only before the six codes. Which values "can be plain" depends
-on the whitespace rule above; under either, a value holding a control
-code is text. A canonical unit contains no layout, no empty text, and no
+with DLE only before the six codes. A value can be plain when it has no
+byte below 0x20 and no edge whitespace. A canonical unit contains no layout, no empty text, and no
 text around a value that could be plain. The old rule that the escape
 set is frozen survives: any byte below 0x20 in a value requires text,
 assigned or not, so a future assignment cannot change what is
@@ -359,12 +361,11 @@ Verified defects in the reference implementation, and how each ends:
 
 1. **The reserved position after SI.** Held for a label; whether bare
    text there is an error for now, and what the ramifications are.
-2. **The whitespace rule** above.
-3. **Torn tails ending in a lone DLE.** Restate the existing repair rule
+2. **Torn tails ending in a lone DLE.** Restate the existing repair rule
    for sequences. Confirmation only.
-4. **The shipped list API.** Keep `list_field` / `list` with the record
+3. **The shipped list API.** Keep `list_field` / `list` with the record
    form, or drop them in favour of ordinary nested tables.
-5. **Rollout.** One change rather than the earlier two-stage plan.
+4. **Rollout.** One change rather than the earlier two-stage plan.
 
 ## Feedback
 
