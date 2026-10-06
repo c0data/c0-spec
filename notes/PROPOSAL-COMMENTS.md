@@ -201,15 +201,19 @@ strings and makes tools treat a file as binary), ESC, and DC1/DC3
   nested table, exactly as at the top.
 - **Stripping is a tool option.** No profile may require comment-free
   input.
+- **Comments may appear inside committed blocks** of a stream log. The
+  block's ETB digest covers them, because it covers every byte between
+  two commits as written; the content hash does not, because comments
+  are framing and outside every canonical unit. The two spans already
+  differ (the block span includes the leading RS, the canonical record
+  excludes it) and answer different questions: whether the write landed,
+  and what the data is.
 
 ## Open Questions
 
 1. **The terminating set.** Presumably FS, GS, RS, SOH, SYN, EOT, ETB, and
    BEL; and ETX when the comment is inside a nested scope.
-2. **Stream logs.** The ETB digest covers a block's bytes exactly, which
-   would include comments, while the content hash excludes them. Two
-   different hashes, or no comments inside committed blocks?
-3. **C0-DIFF.** A comment there would run to the next FS or GS.
+2. **C0-DIFF.** A comment there would run to the next FS or GS.
 
 ## Feedback
 
