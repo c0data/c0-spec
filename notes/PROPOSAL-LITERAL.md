@@ -216,6 +216,22 @@ would have two spellings. The cost is one byte per list.
 The ordinary table reader reads every row of the table above unchanged,
 which is the test that matters.
 
+### References (decided 2026-10-06)
+
+A reference is ENQ followed by a value. A plain value names a group:
+
+    ␅tags
+
+A nested value is a path: one record, one field per segment, with its RS
+written like any nested list:
+
+    ␅␂␞tags␟001␟label␃
+
+A reference is hashed as the bytes it is written in, the pointer and
+not the thing pointed at, so this spelling is permanent for identity.
+Chaining ENQs (`␅tags␅001`) was considered and rejected: the same bytes
+could mean one path or two references in one field.
+
 ### Framing cuts through
 
 An unescaped ETB is always a commit, an unescaped EOT always ends a
@@ -349,16 +365,14 @@ Verified defects in the reference implementation, and how each ends:
 
 1. **The reserved position after STX.** Reserved for a label; confirm
    that bare text there is an error for now.
-2. **Reference paths.** `␅␂tags␟001␟label␃` is ENQ followed by a nested
-   level whose one record holds the segments. Confirm that reading.
-3. **Pretty rendering.** Whether `c0fmt` and the editor show the pair as
+2. **Pretty rendering.** Whether `c0fmt` and the editor show the pair as
    two glyphs or as one quotation glyph.
-4. **Torn tails ending in a lone DLE.** The stream repair rule already
+3. **Torn tails ending in a lone DLE.** The stream repair rule already
    covers a tail torn between a DLE and its escaped byte; restate it for
    sequences.
-5. **The shipped list API.** Keep `list_field` / `list` with the record
+4. **The shipped list API.** Keep `list_field` / `list` with the record
    form, or drop them in favour of ordinary nested tables.
-6. **Rollout.** Whether this replaces the earlier two-stage plan with a
+5. **Rollout.** Whether this replaces the earlier two-stage plan with a
    single change; it needs no new codes, so the canonical-form concern
    that motivated two stages does not arise.
 
