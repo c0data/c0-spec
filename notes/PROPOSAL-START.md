@@ -240,20 +240,34 @@ dialogue and have no role in a document at rest.
   id suffices. Before 1.0 that promise cannot be made, and hashes may
   change between revisions.
 
+- **Where the markers are required** (2026-10-06):
+
+  | Marker | Required | Exception |
+  |---|---|---|
+  | SYN | at the start of every file and message, logs included | none |
+  | EOT | at the end of every document in a file or message | logs, which have no end |
+
+  A log starts with SYN and its heading, committed with the first ETB
+  like everything else; ETB answers completeness block by block, so no
+  end marker exists for a log. Records and groups hashed on their own are
+  slices, not files or messages, and carry neither marker. A missing
+  marker draws the loud warning in both cases, so a file that stops
+  without EOT is suspect rather than silently taken as complete. EOT
+  before EM is implied, since EM is an end of input; end of input never
+  implies EM. (Noted, not designed: a long-lived log may emit a fresh SYN
+  and heading periodically as a resynchronisation point, as BISYNC did.)
+
 ## Open Questions
 
-1. **Where SYN is required.** Files and messages, yes. Records and groups
-   hashed on their own are slices and stay bare. Stream logs: one SYN at
-   the start of the file, and is the heading itself committed with ETB?
-2. **"Warn loudly", precisely.** What a library does (an error value, a
+1. **"Warn loudly", precisely.** What a library does (an error value, a
    callback, a strict mode) versus a command-line tool.
-3. **The first key set.** Confirm `shape` and `version` and their values.
+2. **The first key set.** Confirm `shape` and `version` and their values.
    Should the non-diff, non-stream shapes be declarable as hints for
    converters (tabular to CSV, document to Markdown)?
-4. **Unknown values.** An unknown `shape` or `version` probably means
+3. **Unknown values.** An unknown `shape` or `version` probably means
    refuse rather than warn.
-5. **Key order.** Free, or sorted as the map-canonical rule would have it.
-6. **C0-DIFF.** Must a diff carry `shape diff`, or is it only recommended?
+4. **Key order.** Free, or sorted as the map-canonical rule would have it.
+5. **C0-DIFF.** Must a diff carry `shape diff`, or is it only recommended?
 
 ## Feedback
 
