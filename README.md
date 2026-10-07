@@ -9,6 +9,8 @@ depends on.
 ## Layout
 
 - `DESIGN.md` — the specification (the normative format definition).
+- `GRAMMAR.md` — the formal grammar (ABNF) of well-formed input, with the
+  canonical constraints.
 - `reference.md` — the technical reference (format overview, control codes,
   data shapes, escaping, `c0fmt` usage).
 - `vectors/*.json` — the conformance fixtures (decode, encode, canonical,

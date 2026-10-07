@@ -404,7 +404,8 @@ written in: the pointer, not the thing pointed at.
 element: in C0DATA the next FS, GS, RS, SOH, SYN, EOT, ETB or BEL, or the
 CAN that closes the level it sits in; in a C0-DIFF the next FS or GS. A
 structural code directly after the BEL belongs to the comment and has no
-effect, so a comment is a prefix that neutralises what follows it:
+effect (`SOH RS`, the header-row introducer, counts as one), so a comment
+is a prefix that neutralises what follows it:
 
     ␇␞port␟5432                 a commented-out record
     ␇␝server                    a commented-out group line
