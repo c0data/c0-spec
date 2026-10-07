@@ -11,7 +11,7 @@ import pathlib
 GLYPHS = {
     "␀": 0x00, "␁": 0x01, "␂": 0x02, "␃": 0x03, "␄": 0x04, "␅": 0x05,
     "␆": 0x06, "␇": 0x07, "␈": 0x08, "␉": 0x09, "␊": 0x0A, "␋": 0x0B,
-    "␌": 0x0C, "␍": 0x0D, "␎": 0x0E, "␐": 0x0F, "␐": 0x10, "␑": 0x11,
+    "␌": 0x0C, "␍": 0x0D, "␎": 0x0E, "␏": 0x0F, "␐": 0x10, "␑": 0x11,
     "␒": 0x12, "␓": 0x13, "␔": 0x14, "␕": 0x15, "␖": 0x16, "␗": 0x17,
     "␘": 0x18, "␙": 0x19, "␚": 0x1A, "␛": 0x1B, "␜": 0x1C, "␝": 0x1D,
     "␞": 0x1E, "␟": 0x1F,
@@ -164,7 +164,7 @@ dec("gs-depth", "GS repetition is depth; subsections belong to the group",
      g("c2", [["p3"]])])
 dec("two-files", "A document may hold several FS files",
     "␜a␝g␞1␜b␝g␞2",
-    [], file="a", files=[{"name": "a", "groups": [g("g", [["1"]])]},
+    [g("g", [["1"]])], file="a", files=[{"name": "a", "groups": [g("g", [["1"]])]},
                          {"name": "b", "groups": [g("g", [["2"]])]}])
 dec("records-before-first-gs", "Records before the first GS form the unnamed group",
     "␜db␞a␝g␞b", [g("", [["a"]]), g("g", [["b"]])], file="db")
@@ -257,7 +257,7 @@ enc("empty-string-plain", "The empty string is written as nothing",
     doc([g("", [["", "a", ""]])]), "␞␟a␟")
 enc("binary-run", "Bytes 0x00–0x1F in a value: text, with only the six escaped",
     doc([g("", [[{"hex": bytes(range(32)).hex()}]])]),
-    "␞␂␀␁␐␂␐␃␐␄␅␆␇␈␉␊␋␌␍␎␐␐␐␑␒␓␔␕␐␖␐␗␘␙␚␛␜␝␞␟␃")
+    "␞␂␀␁␐␂␐␃␐␄␅␆␇␈␉␊␋␌␍␎␏␐␐␑␒␓␔␕␐␖␐␗␘␙␚␛␜␝␞␟␃")
 enc("high-bytes-unescaped", "No byte >= 0x20 is ever fenced (UTF-8 passes through)",
     doc([g("", [["héllo", "日本"]])]), "␞héllo␟日本")
 enc("keyed-record-sorted", "A map encodes as a keyed record with keys sorted bytewise",

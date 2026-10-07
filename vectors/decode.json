@@ -852,7 +852,17 @@
       "desc": "A document may hold several FS files",
       "bytes": "1c611d671e311c621d671e32",
       "file": "a",
-      "groups": [],
+      "groups": [
+        {
+          "name": "g",
+          "headers": null,
+          "records": [
+            [
+              "1"
+            ]
+          ]
+        }
+      ],
       "files": [
         {
           "name": "a",
