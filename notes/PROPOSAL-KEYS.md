@@ -1,6 +1,6 @@
 # Proposal: Keyed Units (SOH Marks a Key)
 
-**Status:** Draft — agreed in discussion; details open
+**Status:** Draft — settled in discussion, no open questions
 **Date:** 2026-10-06
 
 ## Summary
@@ -133,14 +133,19 @@ occupy the same place. Keyed units are the same rule with a mark.
   `PROPOSAL-SCHEMA.md`, Open Question 7).
 - One more thing for a pretty-printer to align.
 
-## Open Questions
+## Decided (2026-10-06)
 
-1. **Duplicate keys outside canonical form.** Last wins, first wins, or
-   an error.
-2. **Pretty alignment** of keyed records in `c0fmt`'s aligned modes.
-3. **The converter's reverse guess.** Whether a headerless two-column
-   group should still export as a JSON object for compatibility, or now
-   as an array of pairs.
+- **Duplicate keys** in non-canonical input: last wins, with a warning.
+  It is what every JSON library does, and a map lookup has to return
+  something. Canonical form still requires unique, sorted keys.
+- **Pretty alignment:** keyed records align on the US within each record,
+  so the keys form one column, exactly as a two-column table does. No new
+  option.
+- **The converter guesses no more.** A positional record exports as a
+  JSON array, a keyed record as an object, always. A headerless
+  two-column group is an array of pairs.
+
+No open questions.
 
 ## Feedback
 
