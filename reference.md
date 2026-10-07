@@ -18,21 +18,27 @@ full specification and future directions.
 
 | Byte | Abbr | Glyph | Role |
 |------|------|-------|------|
-| 0x01 | SOH | ␁ | Header (declares field names) |
-| 0x02 | STX | ␂ | Open nested sub-structure |
-| 0x03 | ETX | ␃ | Close nested sub-structure |
-| 0x04 | EOT | ␄ | End of document / message |
+| 0x01 | SOH | ␁ | Heading: a key for the value after it, or `␁␞` a header row |
+| 0x02 | STX | ␂ | Start of text (literal value) |
+| 0x03 | ETX | ␃ | End of text |
+| 0x04 | EOT | ␄ | End of document |
 | 0x05 | ENQ | ␅ | Reference (look up named data) |
-| 0x10 | DLE | ␐ | Escape (next byte is literal) |
+| 0x07 | BEL | ␇ | Comment |
+| 0x0F | SI  | ␏ | Open a nested level |
+| 0x10 | DLE | ␐ | Escape, inside text only |
+| 0x16 | SYN | ␖ | Start of document, then the heading |
 | 0x17 | ETB | ␗ | Commit marker (stream mode) |
+| 0x18 | CAN | ␘ | Close a nested level |
+| 0x19 | EM  | ␙ | End of medium: raw blob follows |
 | 0x1A | SUB | ␚ | Substitution (C0DIFF) |
 | 0x1C | FS  | ␜ | File / Database separator |
 | 0x1D | GS  | ␝ | Group / Table / Section separator |
 | 0x1E | RS  | ␞ | Record / Row separator |
 | 0x1F | US  | ␟ | Unit / Field separator |
 
-All other C0 codes (0x00--0x1F) are currently **reserved**. A parser should
-raise an error on unassigned codes.
+HT, LF and CR are layout outside text. Every other C0 code is unassigned
+and a parser rejects it outside text. Inside text every code is a plain
+byte except six (see Text).
 
 ### Structural Hierarchy
 
@@ -49,51 +55,69 @@ file   group  record  field
 - **US (0x1F)** -- A unit within a record. A field, a property, an element.
 
 Text immediately following FS or GS is the **label** (name) for that scope.
+Every code owns the text after it, up to the next code.
+
+### Documents
+
+A document starts with SYN and ends with EOT. The text after SYN is the
+**heading**, keyed units the reader must know before reading. An empty
+heading is just `␖`.
+
+```
+␖␜mydb␝users␁␞name␟amount␞Alice␟100␄          empty heading
+␖␁shape␟stream␞alice␟100␗␞bob␟200␗             a log (no EOT: logs have no end)
+␖␁shape␟diff␜foo.txt␝Hello ␟world␚universe␄    a C0DIFF
+```
+
+Heading keys: `shape` (`diff`, `stream`; absent means the application
+decides), `version` (absent means 1), `blob` (see Trailing Blob). An
+unknown key is a loud warning. SYN is required at the start of every file
+and message; EOT at the end of every document except a log. A missing one
+is a loud warning; strict mode makes loud warnings errors.
 
 
 ---
 
 ## Two Forms: Compact and Pretty
 
-C0DATA has two representations of the same data.
+C0DATA has two representations of the same data under one grammar: pretty
+form is compact form plus layout plus glyphs.
+
+**Whitespace touching a control code is layout; whitespace inside text is
+data.** Outside text, in both forms:
+
+- space, HT, LF, CR directly before or after a control code are layout;
+- a space elsewhere in a plain value is data ("Alice Smith" keeps its space);
+- HT, LF or CR elsewhere in a plain value is an error: use text.
 
 ### Compact Form (Canonical)
 
-The wire/storage format. A continuous byte stream. Every byte between control
-codes is literal data -- including LF, CR, HT, and spaces. No whitespace is
-ignored. This is the canonical form.
+The wire/storage format: a continuous byte stream with no layout.
 
 ```
-[FS]mydb[GS]users[SOH]name[US]amount[RS]Alice[US]1502.30[RS]Bob[US]340.00
+␖␜mydb␝users␁␞name␟amount␞Alice Smith␟1502.30␞Bob␟340.00␄
 ```
 
 ### Pretty Form (Human-Readable)
 
-Uses Unicode Control Pictures (U+2400 block) for visible glyphs. Whitespace
-rules:
-
-- LF and CR are ignored (formatting only).
-- Whitespace (spaces, tabs) adjacent to control codes is trimmed.
-- Spaces between non-whitespace data characters are preserved
-  (e.g., "Alice Smith" keeps its space).
-- Inside STX/ETX (␂...␃), all content is preserved verbatim --
-  no trimming. This allows STX/ETX to serve as quoting for values
-  with significant leading/trailing whitespace.
+Unicode Control Pictures (U+2400 block) for the codes, line breaks and
+indentation for layout:
 
 ```
-␜mydb
+␖␜mydb
   ␝users
-    ␁name␟amount
+    ␁␞name␟amount
     ␞Alice Smith␟1502.30
     ␞Bob␟340.00
+␄
 ```
 
-To include a literal LF or CR in a value, DLE-escape it: `[DLE][LF]`.
-
-Quoting with STX/ETX:
+A value with edge spaces, a tab, or a line break is text, in both forms:
 
 ```
 ␞␂  leading spaces  ␃␟normal value
+␞note␟␂line one
+line two␃
 ```
 
 
@@ -106,37 +130,44 @@ expresses multiple common data shapes.
 
 | Shape      | Primary Codes Used          | Analogous To         |
 |------------|-----------------------------|----------------------|
-| Tabular    | FS, GS, SOH, RS, US        | CSV, SQL results     |
+| Tabular    | FS, GS, SOH RS, RS, US     | CSV, SQL results     |
 | Document   | FS, GS×N, RS, US           | Markdown, outlines   |
-| Key-Value  | GS, SOH, RS, US            | TOML, INI            |
-| Nested     | STX/ETX, any inner codes   | JSON objects         |
-| Reference  | ENQ, STX/ETX for paths     | foreign keys, links  |
-| Diff       | FS, GS, US, SUB, DLE       | unified diff, patches|
-| Stream     | EOT between documents      | NDJSON, SSE          |
+| Key-Value  | GS, RS, SOH                | TOML, INI            |
+| Nested     | SI/CAN, any inner codes    | JSON objects, arrays |
+| Text       | STX/ETX                    | quoted strings       |
+| Reference  | ENQ, text for paths        | foreign keys, links  |
+| Diff       | FS, GS, US, SUB            | unified diff, patches|
+| Stream     | RS, US, ETB                | NDJSON, SSE, WAL     |
+| Container  | SYN heading, EM            | tar, zip             |
 
-### Tabular (SOH header present)
+### Tabular (header row present)
 
-SOH at the start of a group declares field names. Records are positional
-against those names -- like a CSV header row.
+`␁␞` at the start of a group is a header row: it declares field names, and
+the records after it are positional against them, like a CSV header.
 
 ```
 ␝users
-  ␁name␟amount
+  ␁␞name␟amount
   ␞Alice␟100
   ␞Bob␟200
 ```
 
-Without SOH, data is purely positional (schema known by both sides).
+Without a header row, data is purely positional (schema known by both
+sides). By convention the first field is the record's id.
 
-### Key-Value (no header, 2-field records)
+### Keyed records (maps)
 
-Each RS is an entry: first field is the key, second is the value.
+SOH inside a record introduces a keyed unit: `␁key␟value`. A record is
+positional or keyed, never mixed. Keys in canonical form are unique and
+sorted.
 
 ```
 ␝database
-  ␞host␟localhost
-  ␞port␟5432
+  ␞␁host␟localhost␁port␟5432
 ```
+
+Two-field positional records, `␞host␟localhost`, remain legal and are a
+table of pairs.
 
 ### Multi-field records (no header, N fields)
 
@@ -146,23 +177,32 @@ Each RS is an entry: first field is the key, second is the value.
   ␞d␟e␟f
 ```
 
-### Nested values (STX/ETX)
+### Text (STX/ETX)
 
-When a field value is itself structured, wrap it in STX/ETX. Inside the
-brackets, the separator hierarchy resets -- codes are scoped to the
-sub-structure. STX/ETX can nest for arbitrary depth.
+A value with edge whitespace, a line break, a tab, or any control code is
+written as text. Inside text every byte is data except six, which take a
+DLE in front: STX, ETX, DLE, ETB, EOT, SYN. Text does not nest.
+
+```
+␞Alice␟␂  padded  ␃
+␞script␟␂#!/bin/sh
+echo "a	b"␃
+```
+
+### Nested values (SI/CAN)
+
+When a field value is itself structured, wrap it in SI/CAN. Inside the
+brackets, the hierarchy starts over. Levels nest for arbitrary depth. A list
+is one record; a table is several; a map is a keyed record.
 
 ```
 ␝users
-  ␁name␟address
-  ␞Alice␟␂␁street␟city␞123 Main␟Springfield␃
+  ␁␞name␟roles␟address
+  ␞Alice␟␏␞Admin␟Editor␘␟␏␁␞street␟city␞123 Main␟Springfield␘
 ```
 
-Arrays are US-separated values inside STX/ETX:
-
-```
-␞Alice␟␂Admin␟Editor␟User␃␟1502.30
-```
+`␏␘` is an empty list; `␏␞␘` is a list holding one empty string. The text
+position directly after `␏` is reserved and must be empty.
 
 ### Document (FS wrapper, depth via GS repetition)
 
@@ -170,16 +210,15 @@ GS repeated indicates depth level (like # in Markdown). Within a section,
 RS marks a content block (paragraph) and US marks sub-elements (list items).
 
 ```
-␜My Document
+␖␜My Document
   ␝Chapter 1
     ␞First paragraph.
-    ␞A list:
-      ␟Item one
-      ␟Item two
+    ␞A list:␟Item one␟Item two
     ␝␝Section 1.1
       ␞Nested content.
   ␝Chapter 2
     ␞And so on.
+␄
 ```
 
 ### References (ENQ)
@@ -194,14 +233,54 @@ Simple reference (entire group):
 ␅tags
 ```
 
-Path reference (record or field within a group):
+Path reference (record or field within a group), fenced as text because the
+US would otherwise end the field:
 
 ```
 ␅␂tags␟001␟label␃
 ```
 
-STX/ETX scopes the reference. US separates path segments:
-group → record id → field name.
+US separates path segments: group → record id → field name.
+
+### Comments (BEL)
+
+BEL begins a comment that runs to the end of the enclosing element (the next
+FS, GS, RS, SOH, SYN, EOT, ETB, BEL, or the closing CAN). A code directly
+after the BEL belongs to the comment, so a BEL in front of a record, group
+line, header row or nested value comments it out.
+
+```
+␇ settings for staging
+␝server
+  ␇␞␁host␟old.example.com
+  ␞␁host␟0.0.0.0␁port␟8080
+```
+
+### Stream logs (ETB)
+
+ETB commits the bytes appended since the previous ETB. A trailing block
+without ETB is torn and skipped; writers repair the tail before appending.
+An unescaped ETB is always a commit, even inside text, so a torn text cannot
+hide later commits.
+
+```
+␖␁shape␟stream␁␞op␟id␗
+␞create␟a1b2␗
+␞name␟draft␗
+```
+
+### Trailing Blob (EM)
+
+Everything after EM to the end of the container is one raw region, declared
+in the first document's heading under `blob` as a table of name, offset,
+length and optional hash. A reader stops at EM; any document may reference
+a blob by name.
+
+```
+␖␁blob␟␏␁␞name␟offset␟length␟hash␞lamp␟0␟3072000␟sha256:cd34…␘
+␜catalogue␝items␁␞name␟photo␞Lamp␟lamp␄
+␙…raw bytes…
+```
 
 
 ---
@@ -221,14 +300,18 @@ A section is a sequence of **units** separated by US. Each unit is either:
 
 Units are concatenated to build a search pattern. The pattern must match
 **exactly once** in the file. Then only the SUB-marked parts are replaced.
+Each anchor, old and new is an ordinary value: plain, or text when it holds
+a line break, a tab, edge whitespace or a control code.
 
 ### Example
 
 Given a file `greeting.txt` containing `Hello world!`:
 
 ```
+␖␁shape␟diff
 ␜greeting.txt
   ␝Hello ␟world␚universe␟!
+␄
 ```
 
 This breaks down as:
@@ -248,7 +331,8 @@ You can anchor on one side, both sides, or use multiple substitutions:
 
 ```
 # Anchor before only (enough if "def run" is unique in context)
-␝class App\n  def ␟run␚start
+␝␂class App
+  def ␃␟run␚start
 
 # Anchors before and after (more precise)
 ␝Hello ␟world␚universe␟!
@@ -257,6 +341,11 @@ You can anchor on one side, both sides, or use multiple substitutions:
 ␝x = ␟10␚20␟ + ␟5␚15
 # Finds "x = 10 + 5", produces "x = 20 + 15"
 ```
+
+Note that `Hello ` keeps its trailing space only because it is followed by
+US, where the space is data: whitespace next to a code is layout, so an
+anchor that begins or ends with whitespace, or spans lines, is written as
+text, as in the first example.
 
 ### Atomicity Guarantee
 
@@ -273,30 +362,32 @@ A C0DIFF document is an all-or-nothing transaction across multiple files.
 
 C0DIFF shares the same control code vocabulary. FS and GS retain their
 structural meanings (file boundary, section/group boundary). US retains
-its role as a unit-level separator. DLE is the same escape mechanism.
-SUB takes on a diff-specific role that aligns with its original C0
-semantic -- substitution.
+its role as a unit-level separator. Text is the same mechanism. SUB takes
+on a diff-specific role that aligns with its original C0 semantic --
+substitution. A diff should carry `shape␟diff` in its heading.
 
 
 ---
 
 ## Escaping (DLE)
 
-DLE (0x10) escapes the next byte as literal data, not a control code.
+DLE (0x10) exists only inside text, where it precedes one of six codes to
+make it a data byte: STX, ETX, DLE, ETB, EOT, SYN. Outside text no control
+code is data, and a DLE is an error.
 
-- A literal 0x1E in a value: `[DLE][0x1E]`
-- A literal DLE in a value: `[DLE][DLE]`
-
-DLE was chosen over ESC (0x1B) to avoid conflict with ANSI escape sequences.
+```
+␞␂a␐␃b␃        the three bytes a, ETX, b
+```
 
 
 ---
 
 ## Document Termination (EOT)
 
-EOT (0x04) marks the end of a complete C0DATA document. Optional in
-file-at-rest scenarios (EOF is implicit). Useful for streaming, where
-multiple documents may be sent over a single connection.
+EOT (0x04) marks the end of a complete C0DATA document. Required at the end
+of every document in a file or message, except a log; a missing EOT is a
+loud warning. Several documents in one file or connection each begin with
+their own SYN.
 
 
 ---
@@ -309,7 +400,7 @@ The separator codes maintain consistent meaning across all data shapes:
 |------------|-------------------|---------------------------|
 | Tabular    | row               | field / column            |
 | Document   | paragraph / block | list item / element       |
-| Key-Value  | entry             | key → value               |
+| Key-Value  | the section's map | key → value (after SOH)   |
 | Diff       | --                | anchor ↔ replacement unit |
 
 
@@ -317,13 +408,14 @@ The separator codes maintain consistent meaning across all data shapes:
 
 ## Data Shape Mapping
 
-How C0DATA maps to and from JSON/YAML/CSV.
+How C0DATA maps to and from JSON/YAML/CSV. A positional record is an array,
+a keyed record is an object; nothing is guessed.
 
 ### Tabular → JSON
 
 ```
 ␝users
-  ␁name␟amount
+  ␁␞name␟amount
   ␞Alice␟100
   ␞Bob␟200
 ```
@@ -342,8 +434,7 @@ Bob,200
 
 ```
 ␝database
-  ␞host␟localhost
-  ␞port␟5432
+  ␞␁host␟localhost␁port␟5432
 ```
 
 ```json
@@ -366,24 +457,25 @@ Bob,200
 
 ```
 ␝users
-  ␁name␟address
-  ␞Alice␟␂␁street␟city␞123 Main␟Springfield␃
+  ␁␞name␟roles␟address
+  ␞Alice␟␏␞Admin␟Editor␘␟␏␞␁street␟123 Main␁city␟Springfield␘
 ```
 
 ```json
-{"users": [{"name": "Alice", "address": {"street": "123 Main", "city": "Springfield"}}]}
+{"users": [{"name": "Alice", "roles": ["Admin", "Editor"], "address": {"street": "123 Main", "city": "Springfield"}}]}
 ```
 
 ### Document → JSON
 
 ```
-␜mydb
+␖␜mydb
   ␝users
-    ␁name
+    ␁␞name
     ␞Alice
   ␝products
-    ␁id
+    ␁␞id
     ␞01
+␄
 ```
 
 ```json

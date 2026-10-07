@@ -18,7 +18,8 @@ depends on.
   design sketches, the schema-system proposal, and the 2026-10 proposals
   for a document start marker (SYN), comments (BEL), text and nesting
   (STX … ETX text, SI … CAN levels), keyed units (SOH introduces a
-  key), and a trailing blob (EM). Nothing in `notes/` is adopted until it appears in DESIGN.md.
+  key), and a trailing blob (EM), all settled 2026-10-07 and now
+  normative in DESIGN.md. Nothing in `notes/` is adopted until it appears in DESIGN.md.
 
 ## Using the vectors
 
