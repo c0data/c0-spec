@@ -1,6 +1,6 @@
 # Proposal: Trailing Blob (EM, End of Medium)
 
-**Status:** Draft — direction agreed in discussion; details open
+**Status:** Draft — settled in discussion — direction agreed in discussion; details open
 **Date:** 2026-10-05
 **Builds on:** `PROPOSAL-APPENDIX.md` (index group, references, integrity
 reasoning) and `PROPOSAL-START.md` (the heading that carries the checks)
@@ -62,7 +62,8 @@ entirely, and EM is the code whose meaning is that option.
 - **Nothing structured follows it,** so there is nothing to lose. Every
   byte before EM is scannable as today; every byte after it is the blob.
 - **Chaining is simply not offered.** A container of several documents
-  may end with one EM and one blob, which the last document owns.
+  may end with one EM and one raw region, declared in the first
+  document's heading and sliced into named blobs by its table.
 
 The appendix proposal was deferred because it made C0DATA a container
 for bytes it does not interpret, and because the sidecar pattern served
@@ -87,7 +88,7 @@ after it has an empty blob.
 
 ### The declaration in the heading
 
-The document that owns the blob declares it with one key:
+The **first document's heading** declares the blobs, with one key:
 
 | Key | Value |
 |---|---|
@@ -96,6 +97,30 @@ The document that owns the blob declares it with one key:
 Offsets are relative to the first byte after EM. Rows may overlap, may
 leave gaps for alignment, and may be zero length. A container with one
 image is one row.
+
+Blobs belong to the container, not to a document: any document in it
+may reference any blob by name, and a reference is data, resolved by
+the library. So the table must be known before any document is read,
+which is the format's declare-before-use rule, and the first heading is
+also the one place found without a scan. A `blob` key in any later
+heading is a loud warning. For a container of several documents the
+recommended form is a heading-only first document, a container header:
+
+    ␖␁blob␟␏␁name␟offset␟length␟hash
+      ␞lamp␟0␟3072000␟sha256:cd34…
+      ␞desk␟3072000␟1900000␟sha256:ef56…␘␄
+    ␖␜catalogue␝items␁name␟photo␞Lamp␟lamp␞Desk␟desk␄
+    ␖␁shape␟stream␞…␗
+    ␙…raw…
+
+It keeps container metadata apart from document metadata and leaves the
+first real document extractable unchanged, at the cost of a few bytes
+and an empty-bodied document at the front. It is a style, not a
+mechanism: a single-document file writes the table into its own heading,
+and a reader applies the same rule to both. Per-document declarations
+were considered and rejected: a document split out of a container loses
+the raw tail regardless, so the library rewrites blobs and offsets
+either way, and per-document rows only add duplicates and conflicts.
 
 The checks a reader makes before trusting any blob byte: the container
 must hold at least the largest offset plus length past EM, or the blob
@@ -156,7 +181,10 @@ gains an option to attach one and an option to strip one.
 
 Explicit offsets make alignment the producer's choice. A producer that
 wants page-aligned images pads the region; the index points past the
-padding. The spec stays silent beyond that note.
+padding, and the bytes in the gaps are undeclared. The spec stays silent
+beyond that note; a library may offer alignment as a writer option. A
+recommended page size would be right for one platform and decade and
+wrong for the next.
 
 ## What it costs
 
@@ -178,11 +206,15 @@ padding. The spec stays silent beyond that note.
 - **DESIGN.md** currently reserves EOT followed by ENQ for the old frame.
   If EM is adopted, that reservation can be released.
 
-## Open Questions
+## Decided (2026-10-06)
 
-1. **Ownership in a multi-document container:** the last document, as
-   proposed, or the first.
-2. **Alignment:** silent, as proposed, or a recommended page size.
+- The `blob` table lives in the first document's heading; a heading-only
+  first document is the recommended form for a multi-document container;
+  any document may reference any blob by name; `blob` in a later heading
+  is a loud warning.
+- Alignment is the writer's choice; the spec is silent.
+
+No open questions.
 
 ## Feedback
 
