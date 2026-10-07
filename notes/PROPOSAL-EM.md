@@ -1,6 +1,6 @@
 # Proposal: Trailing Blob (EM, End of Medium)
 
-**Status:** Draft — settled in discussion — direction agreed in discussion; details open
+**Status:** Draft — settled in discussion, no open questions
 **Date:** 2026-10-05
 **Builds on:** `PROPOSAL-APPENDIX.md` (index group, references, integrity
 reasoning) and `PROPOSAL-START.md` (the heading that carries the checks)
