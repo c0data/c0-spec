@@ -7,15 +7,27 @@ that passes them is conforming, and two conforming codecs produce
 identical bytes for the same data — the property content addressing
 depends on.
 
+## Generating
+
+The cases are written in glyph form in `gen.py` and the JSON files are its
+output. Edit `gen.py`, run `python3 vectors/gen.py`, commit both.
+
 ## Encoding conventions
 
-- **Buffers** (`bytes`, `canonical`, `blocks[]`) are lowercase hex
+- **Buffers** (`bytes`, `canonical`, `blocks[]`, `tail`) are lowercase hex
   strings of compact-form bytes.
-- **Field values** are either a JSON string (the value's bytes are its
-  UTF-8 encoding; control characters appear as ``-style escapes)
-  or `{"hex": "..."}` for values that are not valid UTF-8. Either way
-  the expected value is the **logical** value — DLE escapes decoded.
-- Every file has a `version` and a `cases` array; every case has a
+- **Values** are the **logical** value: the inside of a text with its DLE
+  escapes decoded, or the plain value with layout trimmed. A value is a
+  JSON string (UTF-8; control characters as `\u001f`-style escapes),
+  `{"hex": "..."}` for bytes that are not valid UTF-8, or
+  `{"level": {"headers": [...] | null, "records": [...]}}` for a nested
+  level (SI … CAN).
+- **Records** are a JSON array (positional) or `{"keys": [[k, v], ...]}`
+  (keyed, SOH units, in written order).
+- **Headers** come from a header row, `SOH RS`.
+- A **heading** is `[[key, value], ...]` in written order; absent means no
+  SYN.
+- Every file has a `version` (2) and a `cases` array; every case has a
   unique `name` and a human `desc`.
 
 ## Files
@@ -29,18 +41,22 @@ Compact bytes → expected structure. Case shape:
   "name": "...", "desc": "...",
   "bytes": "<hex>",
   "file": "dbname" | null,
+  "heading": [["shape", "stream"], ...],      // optional
   "groups": [
     {"name": "users", "headers": ["a", "b"] | null,
-     "records": [["field", {"hex": "00"}], ...]}
-  ]
+     "records": [["field", {"hex": "00"}], {"keys": [["k", "v"]]}, ...]}
+  ],
+  "tail": "<hex>"                              // optional: raw bytes after EM
 }
 ```
 
 A single group with `"name": ""` and `"file": null` means the buffer is
-a bare record stream (no FS/GS preamble). Expected records follow the
-contract exactly: N separators = N+1 fields; an empty record is one
-empty field; ETB commit markers and payloads are tolerated framing and
-never appear in names, headers, or fields.
+a bare record stream. Expected records follow the contract exactly: N
+separators = N+1 fields; an empty record is one empty field; whitespace
+touching a code is layout and never appears in a value; ETB, EOT, SYN
+and BEL comments are framing and never appear in names, headers, or
+fields; a keyed record reports its units as written, duplicates
+included (a map lookup resolves last-wins with a warning).
 
 ### encode.json
 
@@ -49,16 +65,20 @@ Logical structure → expected canonical bytes. Case shape:
 ```json
 {
   "name": "...", "desc": "...",
-  "build": {"file": "db" | null,
+  "build": {"file": "db" | null, "heading": [[k, v], ...] | absent,
             "groups": [{"name": "g", "headers": [...] | null,
-                        "records": [[...]]}]},
-  "canonical": "<hex>"
+                        "records": [[...] | {"keys": [[k, v], ...]}]}]},
+  "canonical": "<hex>",
+  "bytes": "<hex>"        // only with a heading: the whole file, SYN … EOT
 }
 ```
 
-A conforming encoder MUST produce exactly `canonical`: minimal escaping
-(every value byte < 0x20 escaped with DLE, nothing else escaped), order
-preserved, no framing bytes.
+A conforming encoder MUST produce exactly `canonical`: a value is plain
+when it has no byte below 0x20 and no edge whitespace, otherwise text
+with only STX, ETX, DLE, ETB, EOT and SYN escaped; keyed records sorted
+bytewise by key; order otherwise preserved; no layout, no framing. A
+`build` with a `heading` also specifies `bytes`, the file as written:
+SYN, the heading with sorted keys, the body, EOT.
 
 ### canonical.json
 
@@ -70,13 +90,13 @@ Canonicality classification. Case shape:
 ```
 
 `wellformed` — the bytes tokenize without error. `canonical` — the
-bytes are a canonical document unit (well-formed, minimally escaped,
-no ETB/EOT framing).
+bytes are a canonical document unit (well-formed, one spelling per
+value, keyed records sorted and unique, no layout, no framing, no
+comments).
 
 ### map-canonical.json
 
-Producer-level canonicalization of logically-unordered **maps**. Case
-shape:
+Producer-level canonicalization of maps. Case shape:
 
 ```json
 {
@@ -87,26 +107,21 @@ shape:
 }
 ```
 
-A `key` or `value` is a JSON string (logical bytes), `{"hex": "..."}`
-(binary), or — for a `value` only — `{"map": [[k, v], ...]}` for a
-nested map. The `map` entries are given in **input (pre-sort) order**; a
-conforming producer MUST emit exactly `canonical`: entries sorted by
-ascending byte-lexicographic order of each key's **logical (unescaped)**
-bytes, nested maps sorted recursively, value bytes minimally escaped.
-
-Unlike the other files, **these are not codec tests.** Whether a group
-is an unordered map or an ordered sequence is invisible in the bytes, so
-the byte-level `canonical.json` suite cannot decide them (the same bytes
-are canonical as a sequence and non-canonical as an unsorted map). The
-map-sort rule is a contract on *producers* — the JSON object ↔ C0
-mapping, a schema-driven encoder, an application such as transfs — and
-these vectors are consumed there, not by the core tokenizer/codec.
-Codec-only conformance harnesses should skip this file.
+A `key` is a name (a JSON string). A `value` is a JSON string,
+`{"hex": "..."}`, or `{"map": [[k, v], ...]}` for a nested map. Entries
+are given in **input (pre-sort) order**; a conforming producer MUST emit
+exactly `canonical`: one keyed record, keys sorted bytewise, a nested
+map as a level holding one keyed record, values plain or text per the
+encode rules. Since a keyed record is the format's own map, this is now
+checkable by the codec as well as by the JSON object ↔ C0 mapping.
 
 ### invalid.json
 
 Bytes that MUST be rejected: `{"name", "desc", "bytes"}` — tokenizing
-raises (unassigned control code, or DLE at end of input).
+raises (unassigned code, DLE outside text or before the wrong byte,
+layout code inside a plain value, unbalanced text or level, a label
+after SI, a mixed record, a key without a value, a name written as
+text).
 
 ### stream.json
 
@@ -116,38 +131,32 @@ Stream-mode (ETB commit) semantics. Case shape:
 {"name": "...", "desc": "...", "bytes": "<hex>",
  "committed_end": 6, "torn": false,
  "blocks": ["<hex>", ...],
+ "damaged": [0],          // optional: blocks cut by an ETB inside open text or a level
  "records": [[...]] }
 ```
 
-`committed_end` — offset just past the last ETB and its payload.
-`torn` — uncommitted bytes trail the last commit. `blocks` — each
-committed block's bytes (previous commit to ETB, marker and payload
-excluded). `records` (optional) — logical records of the committed
-region.
+`committed_end` — offset just past the last ETB and its payload. `torn`
+— uncommitted bytes trail the last commit, including a tail that leaves
+text or a level open or ends in a lone DLE. `blocks` — each committed
+block's bytes (previous commit to ETB, marker and payload excluded).
+An unescaped ETB is always a commit, inside text or a level too; a block
+so cut is listed in `damaged`. `records` (optional) — logical records of
+the committed region, headings and header rows excluded.
 
-### list.json
+### nested.json
 
-List fields — a field whose value is a flat list, encoded as US-separated
-items inside STX/ETX (DESIGN.md "Nested Structures": arrays are simply
-US-separated values inside STX/ETX). Case shape:
+Nested levels in a single record, and the list convenience. Case shape:
 
 ```json
 {"name": "...", "desc": "...", "bytes": "<hex>",
- "record": ["scalar", ["item", {"hex": ".."}, ...], "scalar", ...],
+ "record": ["scalar", {"list": ["item", ...]}, {"level": {...}}, ...],
  "canonical": true}
 ```
 
-`bytes` is a bare record stream holding one record. `record` is that
-record's expected logical fields: an entry that is a JSON array is a
-list field and is read with the list accessor (`Record#list` or its
-equivalent), which splits the field's STX/ETX scope on top-level US and
-DLE-unescapes each item; every other entry is read as a scalar value.
-The first field is always a scalar.
-
-`canonical` — when true, building the record with the first field as a
-scalar and each later entry via the builder's list-field writer (array)
-or scalar field writer MUST produce exactly `bytes`, which are canonical.
-When false the case is decode-only: the bytes are readable as shown but
-are not what an encoder would emit (a nested scope inside an item, a
-plain field read as a one-item list, a scope truncated before ETX).
-
+`bytes` is a bare record stream holding one record. `record` is its
+expected logical fields: `{"list": [...]}` is a level holding exactly
+one positional record, read with the list accessor (`Record#list` or its
+equivalent) and written with the builder's list-field writer;
+`{"level": ...}` is any other level, read with the general accessor
+(the list accessor rejects it). `canonical` — when true, building the
+record MUST produce exactly `bytes`. When false the case is decode-only.

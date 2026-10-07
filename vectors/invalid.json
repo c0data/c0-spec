@@ -1,9 +1,100 @@
 {
-  "version": 1,
+  "version": 2,
   "cases": [
-    {"name": "unassigned-nul", "desc": "NUL (0x00) is unassigned", "bytes": "1e00"},
-    {"name": "unassigned-ack", "desc": "ACK (0x06) is unassigned", "bytes": "1e06"},
-    {"name": "unassigned-can", "desc": "CAN (0x18) is unassigned (reserved, not yet a code)", "bytes": "1e6118"},
-    {"name": "dangling-dle", "desc": "DLE at end of input has nothing to escape", "bytes": "1e6110"}
+    {
+      "name": "unassigned-nul",
+      "desc": "NUL (0x00) is unassigned outside text",
+      "bytes": "1e00"
+    },
+    {
+      "name": "unassigned-ack",
+      "desc": "ACK (0x06) is unassigned",
+      "bytes": "1e06"
+    },
+    {
+      "name": "unassigned-so",
+      "desc": "SO (0x0E) is permanently unassigned",
+      "bytes": "1e0e"
+    },
+    {
+      "name": "raw-lf-in-plain",
+      "desc": "LF in the middle of a plain value",
+      "bytes": "1e610a62"
+    },
+    {
+      "name": "raw-tab-in-plain",
+      "desc": "HT in the middle of a plain value",
+      "bytes": "1e610962"
+    },
+    {
+      "name": "dle-outside-text",
+      "desc": "DLE has no meaning outside text",
+      "bytes": "1e61101f62"
+    },
+    {
+      "name": "dle-before-plain-in-text",
+      "desc": "DLE inside text before a byte that is not one of the six",
+      "bytes": "1e026110626303"
+    },
+    {
+      "name": "dangling-dle",
+      "desc": "DLE at end of input has nothing to escape",
+      "bytes": "1e026110"
+    },
+    {
+      "name": "text-unclosed",
+      "desc": "Text open at end of input",
+      "bytes": "1e02616263"
+    },
+    {
+      "name": "stx-inside-text",
+      "desc": "Text does not nest",
+      "bytes": "1e026102620303"
+    },
+    {
+      "name": "text-spliced",
+      "desc": "Text cannot be part of a plain value",
+      "bytes": "1e6102620363"
+    },
+    {
+      "name": "etx-unmatched",
+      "desc": "ETX with no open text",
+      "bytes": "1e6103"
+    },
+    {
+      "name": "level-unclosed",
+      "desc": "A level open at end of input",
+      "bytes": "1e0f1e61"
+    },
+    {
+      "name": "can-unmatched",
+      "desc": "CAN with no open level",
+      "bytes": "1e6118"
+    },
+    {
+      "name": "level-label",
+      "desc": "Text after SI is reserved",
+      "bytes": "1e0f7267621e311f321f3318"
+    },
+    {
+      "name": "text-after-can",
+      "desc": "Text after CAN belongs to nothing",
+      "bytes": "1e0f1878"
+    },
+    {
+      "name": "mixed-record",
+      "desc": "Positional then keyed units in one record",
+      "bytes": "1e61016b1f76"
+    },
+    {
+      "name": "key-without-value",
+      "desc": "SOH, key, then a record-level code with no US",
+      "bytes": "1e016b1e78"
+    },
+    {
+      "name": "name-with-text",
+      "desc": "Labels and keys are never text",
+      "bytes": "1d0267031e61"
+    }
   ]
 }

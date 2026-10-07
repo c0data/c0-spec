@@ -1,57 +1,182 @@
 {
-  "version": 1,
+  "version": 2,
   "cases": [
     {
       "name": "two-commits",
       "desc": "Two records, each ETB-committed",
       "bytes": "1e61171e6217",
-      "committed_end": 6, "torn": false,
-      "blocks": ["1e61", "1e62"],
-      "records": [["a"], ["b"]]
+      "committed_end": 6,
+      "torn": false,
+      "blocks": [
+        "1e61",
+        "1e62"
+      ],
+      "records": [
+        [
+          "a"
+        ],
+        [
+          "b"
+        ]
+      ]
     },
     {
       "name": "torn-tail",
       "desc": "Uncommitted trailing record is skipped",
       "bytes": "1e61171e62",
-      "committed_end": 3, "torn": true,
-      "blocks": ["1e61"],
-      "records": [["a"]]
+      "committed_end": 3,
+      "torn": true,
+      "blocks": [
+        "1e61"
+      ],
+      "records": [
+        [
+          "a"
+        ]
+      ]
     },
     {
       "name": "batch-block",
       "desc": "Two records under one commit form one atomic block",
       "bytes": "1e611e6217",
-      "committed_end": 5, "torn": false,
-      "blocks": ["1e611e62"],
-      "records": [["a"], ["b"]]
+      "committed_end": 5,
+      "torn": false,
+      "blocks": [
+        "1e611e62"
+      ],
+      "records": [
+        [
+          "a"
+        ],
+        [
+          "b"
+        ]
+      ]
     },
     {
-      "name": "escaped-etb-not-commit",
-      "desc": "DLE-escaped ETB is data; nothing is committed",
-      "bytes": "1e611017",
-      "committed_end": 0, "torn": true,
+      "name": "escaped-etb-in-text-not-commit",
+      "desc": "DLE ETB inside text is data; nothing is committed",
+      "bytes": "1e026110176203",
+      "committed_end": 0,
+      "torn": true,
       "blocks": []
     },
     {
-      "name": "etb-in-scope-not-commit",
-      "desc": "ETB inside an STX/ETX scope is record content, not a commit",
-      "bytes": "1e021703",
-      "committed_end": 0, "torn": true,
-      "blocks": []
+      "name": "etb-in-text-cuts",
+      "desc": "A raw ETB inside open text is a commit: the block is damaged, and later commits are found",
+      "bytes": "1e0261171e6217",
+      "committed_end": 7,
+      "torn": false,
+      "blocks": [
+        "1e0261",
+        "1e62"
+      ],
+      "damaged": [
+        0
+      ]
+    },
+    {
+      "name": "etb-in-level-cuts",
+      "desc": "A raw ETB inside an open level is a commit: that block is damaged",
+      "bytes": "1e0f1e61171e6217",
+      "committed_end": 8,
+      "torn": false,
+      "blocks": [
+        "1e0f1e61",
+        "1e62"
+      ],
+      "damaged": [
+        0
+      ]
+    },
+    {
+      "name": "heading-committed",
+      "desc": "The SYN heading is committed with the first ETB like anything else",
+      "bytes": "160173686170651f73747265616d171e6117",
+      "committed_end": 18,
+      "torn": false,
+      "blocks": [
+        "160173686170651f73747265616d",
+        "1e61"
+      ],
+      "records": [
+        [
+          "a"
+        ]
+      ]
+    },
+    {
+      "name": "header-row-committed",
+      "desc": "A header row is committed like a record",
+      "bytes": "011e781f79171e311f3217",
+      "committed_end": 11,
+      "torn": false,
+      "blocks": [
+        "011e781f79",
+        "1e311f32"
+      ],
+      "records": [
+        [
+          "1",
+          "2"
+        ]
+      ]
     },
     {
       "name": "payload-in-committed-region",
       "desc": "ETB payload extends committed_end but is excluded from the block",
-      "bytes": "1e611763616665",
-      "committed_end": 7, "torn": false,
-      "blocks": ["1e61"],
-      "records": [["a"]]
+      "bytes": "1e61177368613235363a30301e6217",
+      "committed_end": 15,
+      "torn": false,
+      "blocks": [
+        "1e61",
+        "1e62"
+      ],
+      "records": [
+        [
+          "a"
+        ],
+        [
+          "b"
+        ]
+      ]
+    },
+    {
+      "name": "torn-open-text",
+      "desc": "A tail that leaves text open is torn",
+      "bytes": "1e61171e0262",
+      "committed_end": 3,
+      "torn": true,
+      "blocks": [
+        "1e61"
+      ],
+      "records": [
+        [
+          "a"
+        ]
+      ]
+    },
+    {
+      "name": "torn-lone-dle",
+      "desc": "A tail ending in a lone DLE is torn",
+      "bytes": "1e61171e026210",
+      "committed_end": 3,
+      "torn": true,
+      "blocks": [
+        "1e61"
+      ],
+      "records": [
+        [
+          "a"
+        ]
+      ]
     },
     {
       "name": "empty-stream",
       "desc": "Empty buffer: no commits, not torn",
       "bytes": "",
-      "committed_end": 0, "torn": false,
+      "committed_end": 0,
+      "torn": false,
       "blocks": []
     }
   ]

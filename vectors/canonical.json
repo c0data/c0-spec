@@ -1,53 +1,159 @@
 {
-  "version": 1,
+  "version": 2,
   "cases": [
     {
-      "name": "minimal-escape",
-      "desc": "Escaped RS in a value: necessary, canonical",
-      "bytes": "1e61101e62",
-      "wellformed": true, "canonical": true
-    },
-    {
       "name": "plain-table",
-      "desc": "Ordinary table, nothing escaped, no framing",
-      "bytes": "1d7573657273016e616d651f616d6f756e741e416c6963651f3130301e426f621f323030",
-      "wellformed": true, "canonical": true
+      "desc": "Ordinary table, nothing fenced, no framing",
+      "bytes": "1d67011e611f621e311f32",
+      "wellformed": true,
+      "canonical": true
     },
     {
-      "name": "escaped-unassigned-byte",
-      "desc": "Escaped unassigned control byte: necessary (binary data), canonical",
-      "bytes": "1e1006",
-      "wellformed": true, "canonical": true
+      "name": "text-necessary",
+      "desc": "Text around a value holding a control byte: canonical",
+      "bytes": "1e02611f6203",
+      "wellformed": true,
+      "canonical": true
     },
     {
-      "name": "gratuitous-escape",
-      "desc": "DLE before a byte >= 0x20 is gratuitous: decodes fine, not canonical",
-      "bytes": "1e1041",
-      "wellformed": true, "canonical": false
+      "name": "text-escaped-six",
+      "desc": "DLE before one of the six inside text: canonical",
+      "bytes": "1e026110176203",
+      "wellformed": true,
+      "canonical": true
+    },
+    {
+      "name": "text-gratuitous",
+      "desc": "Text around a value that could be plain: not canonical",
+      "bytes": "1e026f6e6c7903",
+      "wellformed": true,
+      "canonical": false
+    },
+    {
+      "name": "text-empty",
+      "desc": "Empty text: the empty string is written as nothing",
+      "bytes": "1e0203",
+      "wellformed": true,
+      "canonical": false
+    },
+    {
+      "name": "layout-space",
+      "desc": "Whitespace touching a code is layout: legal, not canonical",
+      "bytes": "1e61201f62",
+      "wellformed": true,
+      "canonical": false
+    },
+    {
+      "name": "layout-newline",
+      "desc": "Line breaks between codes are layout",
+      "bytes": "1d670a1e61",
+      "wellformed": true,
+      "canonical": false
+    },
+    {
+      "name": "keyed-sorted",
+      "desc": "Keyed record with sorted unique keys",
+      "bytes": "1e01611f3101621f32",
+      "wellformed": true,
+      "canonical": true
+    },
+    {
+      "name": "keyed-unsorted",
+      "desc": "Keys out of bytewise order: not canonical",
+      "bytes": "1e01621f3101611f32",
+      "wellformed": true,
+      "canonical": false
+    },
+    {
+      "name": "keyed-duplicate",
+      "desc": "Duplicate key: not canonical",
+      "bytes": "1e01611f3101611f32",
+      "wellformed": true,
+      "canonical": false
     },
     {
       "name": "trailing-eot",
-      "desc": "EOT is transport framing: not part of a canonical document unit",
-      "bytes": "1d671e6104",
-      "wellformed": true, "canonical": false
+      "desc": "EOT is framing: not part of a canonical document unit",
+      "bytes": "1e6104",
+      "wellformed": true,
+      "canonical": false
     },
     {
       "name": "etb-framing",
-      "desc": "ETB is stream framing: not part of a canonical document unit",
+      "desc": "ETB is framing: not part of a canonical document unit",
       "bytes": "1e6117",
-      "wellformed": true, "canonical": false
+      "wellformed": true,
+      "canonical": false
     },
     {
-      "name": "unassigned-code",
-      "desc": "Bare unassigned control byte: neither well-formed nor canonical",
-      "bytes": "1e06",
-      "wellformed": false, "canonical": false
+      "name": "syn-heading",
+      "desc": "SYN and the heading are framing: not part of a canonical document unit",
+      "bytes": "160173686170651f73747265616d1e61",
+      "wellformed": true,
+      "canonical": false
+    },
+    {
+      "name": "comment",
+      "desc": "A comment is outside the hash: not part of a canonical unit",
+      "bytes": "1d67076e6f74651e61",
+      "wellformed": true,
+      "canonical": false
+    },
+    {
+      "name": "raw-lf-in-plain",
+      "desc": "LF inside a plain value: malformed",
+      "bytes": "1e610a62",
+      "wellformed": false,
+      "canonical": false
+    },
+    {
+      "name": "dle-outside-text",
+      "desc": "DLE outside text: malformed",
+      "bytes": "1e611062",
+      "wellformed": false,
+      "canonical": false
+    },
+    {
+      "name": "dle-before-plain-in-text",
+      "desc": "DLE before a byte that is not one of the six: malformed",
+      "bytes": "1e026110626303",
+      "wellformed": false,
+      "canonical": false
     },
     {
       "name": "dangling-dle",
-      "desc": "DLE at end of input: neither well-formed nor canonical",
-      "bytes": "1e6110",
-      "wellformed": false, "canonical": false
+      "desc": "DLE at end of input: malformed",
+      "bytes": "1e026110",
+      "wellformed": false,
+      "canonical": false
+    },
+    {
+      "name": "unassigned-code",
+      "desc": "Bare unassigned control byte: malformed",
+      "bytes": "1e610662",
+      "wellformed": false,
+      "canonical": false
+    },
+    {
+      "name": "so-byte",
+      "desc": "SO is permanently unassigned",
+      "bytes": "1e610e62",
+      "wellformed": false,
+      "canonical": false
+    },
+    {
+      "name": "level-label",
+      "desc": "Text after SI is reserved: malformed",
+      "bytes": "1e0f781e6118",
+      "wellformed": false,
+      "canonical": false
+    },
+    {
+      "name": "mixed-record",
+      "desc": "A record is positional or keyed, never mixed",
+      "bytes": "1e61016b1f76",
+      "wellformed": false,
+      "canonical": false
     }
   ]
 }
