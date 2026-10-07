@@ -13,7 +13,8 @@ records, at the same level of the hierarchy:
     ␞Admin␟Editor␟User                 a list: plain units
     ␞␁host␟localhost␁port␟5432          a map: keyed units
 
-The table header C0DATA already has is the same marking, hoisted: SOH
+The table header C0DATA already has is the same marking, hoisted (now
+written `SOH RS`, see below): SOH
 after a group label means "these keys apply to every record below".
 
     ␝users␁name␟amount
@@ -80,11 +81,31 @@ and rejected: a US between keyed units (`␁k␟v␟␁k␟v`), under which US
 would alternate in meaning; and a colon-like code between key and value
 (`k⁝v␟k⁝v`), JSON's shape, for which no code with a fitting name exists.
 
-### Hoisted keys
+### Hoisted keys: the header row (revised 2026-10-07)
 
-SOH directly after a group label, or at the top of a log, carries the
-keys for every record that follows, exactly as today. Records under
-hoisted keys are positional.
+A header row is **SOH directly followed by RS**: the record is a heading
+for the records that follow it.
+
+    ␝users␁␞name␟amount␞Alice␟100␞Bob␟200
+
+    ␖␁shape␟stream␁␞name␟amount␞alice␟100␗␞bob␟200␗
+
+Records under a header row are positional. The form replaces today's
+bare `SOH name US name` header, which became ambiguous once SOH marked
+keys: at the top of a log, `␖␁shape␟stream␁name␟amount␞…` reads as a
+heading key `name` with value `amount`, and the column names are lost.
+`SOH RS` is free to take because it was malformed before, a key with no
+US, so no conforming file contains it. It costs one byte per group.
+
+With it, SOH means one thing everywhere: **what follows is a heading
+for what comes after it.** `␖␁shape␟stream`, a key heading its value in
+the document heading; `␞␁host␟localhost`, a key heading its value in a
+record; `␁␞name␟amount`, a record heading the records after it. Where
+the document heading ends is then mechanical: at the first code that is
+not inside a keyed unit, and `SOH RS` is such a code. A header row is
+allowed where it is allowed today, directly after a group label or at
+the top of a log; the syntax no longer depends on that restriction, so
+it could later be relaxed to anywhere a record may appear.
 
 ### Maps and canonical form
 
@@ -133,7 +154,9 @@ occupy the same place. Keyed units are the same rule with a mark.
   `PROPOSAL-SCHEMA.md`, Open Question 7).
 - One more thing for a pretty-printer to align.
 
-## Decided (2026-10-06)
+## Decided (2026-10-06, header row 2026-10-07)
+
+- **Header row is `SOH RS`.** See "Hoisted keys".
 
 - **Duplicate keys** in non-canonical input: last wins, with a warning.
   It is what every JSON library does, and a map lookup has to return

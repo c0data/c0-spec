@@ -91,8 +91,8 @@ after the first FS label would belong to that file, not to the document.
 
 ### The heading
 
-The heading is the text after SYN, up to the first FS, GS, RS, EOT, ETB,
-or BEL. It is a record with SYN in place of RS, written entirely in
+The heading is the text after SYN, up to the first code that is not
+inside a keyed unit: FS, GS, RS, SOH RS, EOT, ETB, or BEL. It is a record with SYN in place of RS, written entirely in
 keyed units: SOH, a key, US, a value (`PROPOSAL-KEYS.md`). Values may be
 plain, text, or nested levels.
 
@@ -104,11 +104,14 @@ A SYN followed immediately by a structural code is the empty heading.
 Keys are names. In canonical form they are unique and sorted bytewise;
 readers accept any order.
 
-The SOH after SYN is a key mark, not a hoisted header: a hoisted header
-follows a group label or opens a log, and a heading is neither. After
-the heading, a standalone SOH keeps its meaning for a log:
+The SOH after SYN is a key mark. A header row for a log is `SOH RS`
+(`PROPOSAL-KEYS.md`, revised 2026-10-07), which ends the heading like
+any other record-level code:
 
-    [SYN][SOH]shape[US]stream[SOH]name[US]amount[RS]alice[US]100[ETB]
+    [SYN][SOH]shape[US]stream[SOH][RS]name[US]amount[RS]alice[US]100[ETB]
+
+(An earlier draft wrote the header as a bare `SOH name US name` after
+the heading, which the heading would absorb as a key.)
 
 An earlier draft spelled the pairs as alternating fields with no mark,
 because an RS in the heading would be mistaken for the body's first

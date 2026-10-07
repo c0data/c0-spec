@@ -1,6 +1,6 @@
 # Proposal: Text and Nesting (STX … ETX, SI … CAN)
 
-**Status:** Draft — core and whitespace rule agreed in discussion
+**Status:** Draft — settled in discussion, no open questions
 **Date:** 2026-10-06 (revision 3)
 **Supersedes:** `PROPOSAL-TEXT.md`; and revision 2 of this file, which
 put literal regions on DLE STX … DLE ETX
@@ -20,8 +20,8 @@ at either end, and each with the name it ought to have:
 
 In Lisp terms: `" … "` and `( … )`.
 
-Outside text a control code is never data, and DLE never stands alone:
-it begins one of a few two-byte sequences. Per-byte escaping goes away.
+Outside text a control code is never data, and DLE does not occur at
+all. Per-byte escaping goes away.
 Two codes are newly assigned, SI and CAN; SO is struck from the list for
 good.
 
@@ -113,29 +113,20 @@ Text is a whole value. It cannot be part of a plain value
 (`abc␂ x ␃def` is malformed). An empty text, `␂␃`, is the empty string
 and is not canonical, since the empty string is written as nothing.
 
-### Text heading: the size
+### No inline size (decided 2026-10-07)
 
-A text may carry a heading in front of its opener, one reserved DLE
-sequence:
-
-    [DLE][SOH] size [STX] bytes… [ETX]
-
-    ␐␁3072000␂ … ␃
-
-The heading holds one thing, the **size**: the encoded length on the
-wire, from the byte after STX to the byte before ETX, escapes included,
-in canonical decimal. It is optional, and it is a **hint**: a reader may
-jump to that offset and must find ETX there; if it does not, it scans
-instead. Nothing depends on the number. The writer counts the six
-escaped values in one pass over bytes it already holds.
-
-The heading is metadata, outside the hash: the canonical unit is
-extracted with it left out, as with other framing. No hash goes here:
-in a log the block's ETB digest covers the value, at rest the content
-hash does, and a hash that identifies the value for the application is
-data and belongs in a neighbouring field. A hash belongs in a heading
-only where nothing else covers the bytes, which is the trailing blob
-(`PROPOSAL-EM.md`).
+An earlier revision put an optional size in front of a text, as a
+reserved DLE sequence, `␐␁3072000␂…␃`, so a reader could jump to the
+ETX of a large text instead of scanning for it. Dropped. A size is
+metadata, and the format keeps metadata out of line on purpose, in the
+SYN heading before the data and the ETB payload after a block; inline
+annotations were rejected in the start-marker proposal for XML's
+attribute-versus-element reasons. A DLE in front of SOH was an escape
+smuggling metadata into a data position. So: inline text is found by
+scanning, which is what inline means, and a value large enough to want
+a size, a hash, or a jump is declared in the heading's `blob` table and
+carried after EM (`PROPOSAL-EM.md`), where that metadata already lives.
+DLE therefore never appears outside text.
 
 ### Nested levels
 
@@ -145,8 +136,21 @@ The hierarchy starts over inside. Nested levels nest. A value inside a
 nested level that needs exactness is itself text. Whitespace inside a
 nested level is layout, as at the top.
 
-Text directly after SI, before the first structural code, is reserved
-(open question 1). An empty level, `␏␘`, holds nothing.
+Text directly after SI, before the first structural code, is the
+level's **label**, in the same position as a file name after FS or a
+group name after GS. It is reserved and must be empty: a non-empty label
+is an error today, not a warning, so that no file carries one and the
+slot stays free. The intended use is a type tag, `␏rgb␞255␟0␟0␘`, if a
+type registry is ever defined; the grammar will not move when it is.
+Text after CAN belongs to no unit and is malformed, like text after ETX.
+An empty level, `␏␘`, holds nothing.
+
+Every opener owns the text after it. The container codes FS, GS and SI
+take a label, and their contents begin at the next code; the leaf codes
+RS, US, ENQ, BEL and ETB take the thing itself; SOH takes a key, then
+its value after US. A record label was considered and rejected: the
+first field is already a record's name by convention, and a byte on
+every row to say so is what the tabular case cannot afford.
 
 ### Lists and nested data
 
@@ -190,19 +194,17 @@ path or two references in one field.
 Every byte below 0x20 belongs to the format:
 
 - the assigned codes are structure or framing;
-- DLE begins a sequence. DLE SOH opens a text heading. All other DLE
-  sequences are reserved and are errors until a spec revision defines
-  them, announced by the heading's `version` key;
+- DLE is an error: it has no meaning outside text;
 - tab, line feed and carriage return are layout (see "Whitespace");
 - any other code is unassigned and rejected.
 
-### Reserved DLE sequences (decided 2026-10-06)
+### DLE (decided 2026-10-06, narrowed 2026-10-07)
 
-A DLE sequence is exactly two bytes. The defined one is DLE SOH. Any
-other DLE sequence is an error, everywhere, including inside text. New
-sequences come only with a spec revision, so a reader built for an
-older spec refuses at the heading rather than guessing at bytes it
-cannot read. (A draft that classed unknown sequences as skippable by
+DLE occurs only inside text, and only before one of the six codes. DLE
+before anything else, and DLE anywhere outside text, is an error. New
+uses come only with a spec revision, so a reader built for an older
+spec refuses at the heading rather than guessing at bytes it cannot
+read. (A draft that classed unknown sequences as skippable by
 their second byte was dropped: skipping inside a value breaks the
 contiguous slice, canonical form would need a rule for it, and the
 version key already does the job.)
@@ -357,15 +359,23 @@ Verified defects in the reference implementation, and how each ends:
   text. The undecided replace-all notation must not reuse either pair.
 - **Schema**: the enum example becomes `␞enum␟␏␞admin␟editor␟viewer␘`.
 
-## Open Questions
+## Decided (2026-10-07)
 
-1. **The reserved position after SI.** Held for a label; whether bare
-   text there is an error for now, and what the ramifications are.
-2. **Torn tails ending in a lone DLE.** Restate the existing repair rule
-   for sequences. Confirmation only.
-3. **The shipped list API.** Keep `list_field` / `list` with the record
-   form, or drop them in favour of ordinary nested tables.
-4. **Rollout.** One change rather than the earlier two-stage plan.
+1. **The position after SI** is the level's label, reserved: an error if
+   non-empty (see "Nested levels").
+2. **A tail ending in a lone DLE** is torn; the existing repair rule
+   discards the uncommitted tail back to the last ETB. Nothing new.
+3. **The shipped list API stays** as a convenience over the general form:
+   `list_field` writes a level holding one record, `␏␞a␟b␘`; `Record#list`
+   reads one back and is an error on a level with more than one record.
+   `vectors/list.json` is replaced by vectors for nested levels, of which
+   the one-record list is a case.
+4. **One rollout.** One spec revision, vectors regenerated once, each port
+   updated once. The earlier two-stage plan existed only while the second
+   pair was uncertain.
+5. **No inline size** (see above).
+
+No open questions.
 
 ## Feedback
 

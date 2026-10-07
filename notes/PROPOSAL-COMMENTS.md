@@ -64,7 +64,7 @@ transmission is a separate, optional step.
 
 So `[BEL][RS]port[US]5432` is a commented-out record,
 `[BEL][GS]server` a commented-out group line,
-`[BEL][SOH]name[US]amount` a commented-out header, and
+`[BEL][SOH][RS]name[US]amount` a commented-out header row, and
 `[BEL] see the runbook` a plain note, which is simply the case with no
 code after the BEL.
 
