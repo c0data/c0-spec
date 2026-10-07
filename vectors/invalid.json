@@ -27,9 +27,14 @@
       "bytes": "1e610962"
     },
     {
-      "name": "dle-outside-text",
-      "desc": "DLE has no meaning outside text",
-      "bytes": "1e61101f62"
+      "name": "dle-before-us",
+      "desc": "DLE must be followed by a structural code or CAN",
+      "bytes": "1e611f101f62"
+    },
+    {
+      "name": "dle-before-plain",
+      "desc": "DLE followed by a plain byte outside text",
+      "bytes": "1e107818"
     },
     {
       "name": "dle-before-plain-in-text",
@@ -64,7 +69,7 @@
     {
       "name": "level-unclosed",
       "desc": "A level open at end of input",
-      "bytes": "1e0f1e61"
+      "bytes": "1e101e61"
     },
     {
       "name": "can-unmatched",
@@ -72,14 +77,39 @@
       "bytes": "1e6118"
     },
     {
-      "name": "level-label",
-      "desc": "Text after SI is reserved",
-      "bytes": "1e0f7267621e311f321f3318"
+      "name": "header-row-mid-group",
+      "desc": "A header row is only the first item of a group",
+      "bytes": "1d671e31011e781e32"
+    },
+    {
+      "name": "us-after-keyed-value",
+      "desc": "US after a keyed value is a mixed record",
+      "bytes": "1e01611f311f32"
+    },
+    {
+      "name": "sub-outside-diff",
+      "desc": "SUB has no meaning outside a diff",
+      "bytes": "1e611a62"
+    },
+    {
+      "name": "bytes-after-eot",
+      "desc": "After EOT only layout, SYN or EM may follow",
+      "bytes": "161e610478"
+    },
+    {
+      "name": "reference-empty-name",
+      "desc": "A reference needs a name",
+      "bytes": "1e051f78"
+    },
+    {
+      "name": "em-inside-level",
+      "desc": "EM while a level is open",
+      "bytes": "1e101e6119726177"
     },
     {
       "name": "text-after-can",
       "desc": "Text after CAN belongs to nothing",
-      "bytes": "1e0f1878"
+      "bytes": "1e101878"
     },
     {
       "name": "mixed-record",

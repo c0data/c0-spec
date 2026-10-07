@@ -429,7 +429,7 @@
     {
       "name": "nested-list",
       "desc": "A nested level holding one record is a list",
-      "bytes": "1e416c6963651f0f1e41646d696e1f456469746f72181f78",
+      "bytes": "1e416c6963651f101e41646d696e1f456469746f72181f78",
       "file": null,
       "groups": [
         {
@@ -458,7 +458,7 @@
     {
       "name": "nested-empty",
       "desc": "An empty level holds no records",
-      "bytes": "1e0f181f78",
+      "bytes": "1e10181f78",
       "file": null,
       "groups": [
         {
@@ -481,7 +481,7 @@
     {
       "name": "nested-one-empty",
       "desc": "A level holding one empty record: a list of one empty string",
-      "bytes": "1e0f1e18",
+      "bytes": "1e101e18",
       "file": null,
       "groups": [
         {
@@ -507,7 +507,7 @@
     {
       "name": "nested-table",
       "desc": "Several records in a level form a table",
-      "bytes": "1e0f1e311f321e331f3418",
+      "bytes": "1e101e311f321e331f3418",
       "file": null,
       "groups": [
         {
@@ -538,7 +538,7 @@
     {
       "name": "nested-header-row",
       "desc": "A header row inside a level names its columns",
-      "bytes": "1e416c6963651f0f011e7374726565741f636974791e31204d61696e1f537072696e676669656c6418",
+      "bytes": "1e416c6963651f10011e7374726565741f636974791e31204d61696e1f537072696e676669656c6418",
       "file": null,
       "groups": [
         {
@@ -569,7 +569,7 @@
     {
       "name": "nested-map",
       "desc": "A keyed record inside a level is a map value",
-      "bytes": "1e0f1e01611f3101621f3218",
+      "bytes": "1e101e01611f3101621f3218",
       "file": null,
       "groups": [
         {
@@ -604,7 +604,7 @@
     {
       "name": "nested-nested",
       "desc": "Levels nest",
-      "bytes": "1e0f1e0f1e611f62181f6318",
+      "bytes": "1e101e101e611f62181f6318",
       "file": null,
       "groups": [
         {
@@ -640,8 +640,8 @@
     },
     {
       "name": "nested-text-inside",
-      "desc": "Text inside a level; RS, SI and CAN inside the text are characters",
-      "bytes": "1e0f1e02781e790f7a1877031f7018",
+      "desc": "Text inside a level; RS, SOH and CAN inside the text are characters",
+      "bytes": "1e101e02781e79017a1877031f7018",
       "file": null,
       "groups": [
         {
@@ -654,7 +654,7 @@
                   "headers": null,
                   "records": [
                     [
-                      "x\u001ey\u000fz\u0018w",
+                      "x\u001ey\u0001z\u0018w",
                       "p"
                     ]
                   ]
@@ -667,8 +667,8 @@
     },
     {
       "name": "nested-layout",
-      "desc": "Layout inside a level is layout",
-      "bytes": "1e0f0a2020011e611f620a20201e311f320a18",
+      "desc": "Layout inside a level is layout, after the opener too",
+      "bytes": "1e100a2020011e611f620a20201e311f320a18",
       "file": null,
       "groups": [
         {
@@ -690,6 +690,241 @@
                   ]
                 }
               }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "nested-empty-level",
+      "desc": "DLE CAN is the empty level (no body)",
+      "bytes": "1e10181f78",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              {
+                "level": {
+                  "headers": null,
+                  "records": []
+                }
+              },
+              "x"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "nested-document",
+      "desc": "A level may hold a whole body: groups and files",
+      "bytes": "1e646f631f101c661d67311e611d6732011e781e6218",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "doc",
+              {
+                "level": {
+                  "files": [
+                    {
+                      "name": "f",
+                      "groups": [
+                        {
+                          "name": "g1",
+                          "headers": null,
+                          "records": [
+                            [
+                              "a"
+                            ]
+                          ]
+                        },
+                        {
+                          "name": "g2",
+                          "headers": [
+                            "x"
+                          ],
+                          "records": [
+                            [
+                              "b"
+                            ]
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reference-group",
+      "desc": "ENQ with a plain name is a group reference; reported as written",
+      "bytes": "1e611f0574616773",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              {
+                "ref": "tags"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reference-path",
+      "desc": "ENQ with text is a path; segments split on US",
+      "bytes": "1e611f0502746167731f3030311f6c6162656c03",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              {
+                "ref": [
+                  "tags",
+                  "001",
+                  "label"
+                ]
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gs-depth",
+      "desc": "GS repetition is depth; subsections belong to the group",
+      "bytes": "1d63311e70311d1d73311e70321d63321e7033",
+      "file": null,
+      "groups": [
+        {
+          "name": "c1",
+          "headers": null,
+          "records": [
+            [
+              "p1"
+            ]
+          ],
+          "sections": [
+            {
+              "name": "s1",
+              "headers": null,
+              "records": [
+                [
+                  "p2"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "name": "c2",
+          "headers": null,
+          "records": [
+            [
+              "p3"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "two-files",
+      "desc": "A document may hold several FS files",
+      "bytes": "1c611d671e311c621d671e32",
+      "file": "a",
+      "groups": [],
+      "files": [
+        {
+          "name": "a",
+          "groups": [
+            {
+              "name": "g",
+              "headers": null,
+              "records": [
+                [
+                  "1"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "name": "b",
+          "groups": [
+            {
+              "name": "g",
+              "headers": null,
+              "records": [
+                [
+                  "2"
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "records-before-first-gs",
+      "desc": "Records before the first GS form the unnamed group",
+      "bytes": "1c64621e611d671e62",
+      "file": "db",
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a"
+            ]
+          ]
+        },
+        {
+          "name": "g",
+          "headers": null,
+          "records": [
+            [
+              "b"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "etb-payload-tolerated",
+      "desc": "Outside stream mode an ETB and its payload are a no-op",
+      "bytes": "1e61177368613235363a30301e62",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a"
+            ],
+            [
+              "b"
             ]
           ]
         }
@@ -822,7 +1057,7 @@
     {
       "name": "heading-keys",
       "desc": "The heading is keyed units after SYN",
-      "bytes": "160173686170651f73747265616d0176657273696f6e1f311e611f62",
+      "bytes": "160173686170651f746162756c61720176657273696f6e1f311e611f62",
       "file": null,
       "groups": [
         {
@@ -839,7 +1074,7 @@
       "heading": [
         [
           "shape",
-          "stream"
+          "tabular"
         ],
         [
           "version",
@@ -849,8 +1084,8 @@
     },
     {
       "name": "heading-then-header-row",
-      "desc": "SOH RS ends the heading and is the log's header row",
-      "bytes": "160173686170651f73747265616d011e781f791e311f32",
+      "desc": "SOH RS ends the heading and is the body's header row",
+      "bytes": "160176657273696f6e1f31011e781f791e311f32",
       "file": null,
       "groups": [
         {
@@ -869,15 +1104,42 @@
       ],
       "heading": [
         [
-          "shape",
-          "stream"
+          "version",
+          "1"
+        ]
+      ]
+    },
+    {
+      "name": "heading-layout-between-soh-rs",
+      "desc": "Layout between SOH and RS is still a header row",
+      "bytes": "160176657273696f6e1f310a01201e781f790a1e311f32",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": [
+            "x",
+            "y"
+          ],
+          "records": [
+            [
+              "1",
+              "2"
+            ]
+          ]
+        }
+      ],
+      "heading": [
+        [
+          "version",
+          "1"
         ]
       ]
     },
     {
       "name": "heading-nested-value",
       "desc": "A heading value may be a level (the blob table)",
-      "bytes": "1601626c6f621f0f011e6e616d651f6f66667365741f6c656e6774681e696d671f301f33181d671e61",
+      "bytes": "1601626c6f621f10011e6e616d651f6f66667365741f6c656e6774681e696d671f301f33181d671e61",
       "file": null,
       "groups": [
         {
@@ -969,7 +1231,7 @@
     {
       "name": "comment-in-level",
       "desc": "Comments are allowed inside a level",
-      "bytes": "1e0f071e781e7918",
+      "bytes": "1e10071e781e7918",
       "file": null,
       "groups": [
         {
@@ -993,6 +1255,73 @@
       ]
     },
     {
+      "name": "comment-in-field-position",
+      "desc": "A comment in field position ends the record's content",
+      "bytes": "1e416c6963651f07101e41646d696e181f3130301e426f62",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "Alice",
+              ""
+            ],
+            [
+              "Bob"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-swallows-keyed-unit",
+      "desc": "A bare SOH inside a comment is content",
+      "bytes": "1e01611f31076e01621f321e78",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            {
+              "keys": [
+                [
+                  "a",
+                  "1"
+                ]
+              ]
+            },
+            [
+              "x"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-ends-at-header-row",
+      "desc": "A comment ends at a header row",
+      "bytes": "1d67076e6f7465011e781f791e311f32",
+      "file": null,
+      "groups": [
+        {
+          "name": "g",
+          "headers": [
+            "x",
+            "y"
+          ],
+          "records": [
+            [
+              "1",
+              "2"
+            ]
+          ]
+        }
+      ]
+    },
+    {
       "name": "comment-with-text",
       "desc": "Text inside a comment is content of the comment",
       "bytes": "1d6707021e6e6f742061207265636f7264031e61",
@@ -1010,9 +1339,48 @@
       ]
     },
     {
+      "name": "two-documents",
+      "desc": "Two documents in one container, each with its own SYN",
+      "bytes": "161d671e6104161d671e6204",
+      "file": null,
+      "groups": [],
+      "documents": [
+        {
+          "heading": [],
+          "file": null,
+          "groups": [
+            {
+              "name": "g",
+              "headers": null,
+              "records": [
+                [
+                  "a"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "heading": [],
+          "file": null,
+          "groups": [
+            {
+              "name": "g",
+              "headers": null,
+              "records": [
+                [
+                  "b"
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "em-stops-reading",
       "desc": "Everything after EM is the raw tail, not scanned",
-      "bytes": "1601626c6f621f0f011e6e616d651f6f66667365741f6c656e6774681e741f301f33181d671e6119781e79",
+      "bytes": "1601626c6f621f10011e6e616d651f6f66667365741f6c656e6774681e741f301f33181d671e6119781e79",
       "file": null,
       "groups": [
         {

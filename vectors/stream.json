@@ -78,11 +78,11 @@
     {
       "name": "etb-in-level-cuts",
       "desc": "A raw ETB inside an open level is a commit: that block is damaged",
-      "bytes": "1e0f1e61171e6217",
+      "bytes": "1e101e61171e6217",
       "committed_end": 8,
       "torn": false,
       "blocks": [
-        "1e0f1e61",
+        "1e101e61",
         "1e62"
       ],
       "damaged": [
@@ -162,6 +162,51 @@
       "bytes": "1e61171e026210",
       "committed_end": 3,
       "torn": true,
+      "blocks": [
+        "1e61"
+      ],
+      "records": [
+        [
+          "a"
+        ]
+      ]
+    },
+    {
+      "name": "tail-only-layout",
+      "desc": "A tail of layout alone is not torn",
+      "bytes": "1e61170a",
+      "committed_end": 3,
+      "torn": false,
+      "blocks": [
+        "1e61"
+      ],
+      "records": [
+        [
+          "a"
+        ]
+      ]
+    },
+    {
+      "name": "tail-eot",
+      "desc": "EOT after the last commit closes the log and is not torn",
+      "bytes": "1e611704",
+      "committed_end": 3,
+      "torn": false,
+      "blocks": [
+        "1e61"
+      ],
+      "records": [
+        [
+          "a"
+        ]
+      ]
+    },
+    {
+      "name": "tail-comment",
+      "desc": "A comment after the last commit is not torn",
+      "bytes": "1e611707627965",
+      "committed_end": 3,
+      "torn": false,
       "blocks": [
         "1e61"
       ],

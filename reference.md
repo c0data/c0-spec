@@ -24,21 +24,20 @@ full specification and future directions.
 | 0x04 | EOT | ␄ | End of document |
 | 0x05 | ENQ | ␅ | Reference (look up named data) |
 | 0x07 | BEL | ␇ | Comment |
-| 0x0F | SI  | ␏ | Open a nested level |
-| 0x10 | DLE | ␐ | Escape, inside text only |
+| 0x10 | DLE | ␐ | Recurse: open a nested level (outside text); escape (inside text) |
 | 0x16 | SYN | ␖ | Start of document, then the heading |
 | 0x17 | ETB | ␗ | Commit marker (stream mode) |
 | 0x18 | CAN | ␘ | Close a nested level |
 | 0x19 | EM  | ␙ | End of medium: raw blob follows |
 | 0x1A | SUB | ␚ | Substitution (C0DIFF) |
-| 0x1C | FS  | ␜ | File / Database separator |
+| 0x1C | FS  | ␜ | File separator |
 | 0x1D | GS  | ␝ | Group / Table / Section separator |
 | 0x1E | RS  | ␞ | Record / Row separator |
 | 0x1F | US  | ␟ | Unit / Field separator |
 
-HT, LF and CR are layout outside text. Every other C0 code is unassigned
-and a parser rejects it outside text. Inside text every code is a plain
-byte except six (see Text).
+Sixteen codes. HT, LF and CR are layout outside text. Every other C0
+code is unassigned and a parser rejects it outside text. Inside text
+every code is a plain byte except six (see Text).
 
 ### Structural Hierarchy
 
@@ -55,7 +54,8 @@ file   group  record  field
 - **US (0x1F)** -- A unit within a record. A field, a property, an element.
 
 Text immediately following FS or GS is the **label** (name) for that scope.
-Every code owns the text after it, up to the next code.
+Every code owns the text after it, up to the next code. A document may hold
+several FS files.
 
 ### Documents
 
@@ -66,7 +66,7 @@ heading is just `␖`.
 ```
 ␖␜mydb␝users␁␞name␟amount␞Alice␟100␄          empty heading
 ␖␁shape␟stream␞alice␟100␗␞bob␟200␗             a log (no EOT: logs have no end)
-␖␁shape␟diff␜foo.txt␝Hello ␟world␚universe␄    a C0DIFF
+␖␁shape␟diff␜foo.txt␝␂Hello ␃␟world␚universe␄  a C0DIFF
 ```
 
 Heading keys: `shape` (`diff`, `stream`; absent means the application
@@ -86,7 +86,8 @@ form is compact form plus layout plus glyphs.
 **Whitespace touching a control code is layout; whitespace inside text is
 data.** Outside text, in both forms:
 
-- space, HT, LF, CR directly before or after a control code are layout;
+- space, HT, LF, CR directly before or after a control code, or at the
+  start or end of input, are layout;
 - a space elsewhere in a plain value is data ("Alice Smith" keeps its space);
 - HT, LF or CR elsewhere in a plain value is an error: use text.
 
@@ -133,7 +134,7 @@ expresses multiple common data shapes.
 | Tabular    | FS, GS, SOH RS, RS, US     | CSV, SQL results     |
 | Document   | FS, GS×N, RS, US           | Markdown, outlines   |
 | Key-Value  | GS, RS, SOH                | TOML, INI            |
-| Nested     | SI/CAN, any inner codes    | JSON objects, arrays |
+| Nested     | DLE … CAN, any inner codes | JSON objects, arrays |
 | Text       | STX/ETX                    | quoted strings       |
 | Reference  | ENQ, text for paths        | foreign keys, links  |
 | Diff       | FS, GS, US, SUB            | unified diff, patches|
@@ -142,8 +143,9 @@ expresses multiple common data shapes.
 
 ### Tabular (header row present)
 
-`␁␞` at the start of a group is a header row: it declares field names, and
-the records after it are positional against them, like a CSV header.
+`␁␞` as the first item of a group is a header row: it declares field
+names, and the positional records after it are read against them, like a
+CSV header.
 
 ```
 ␝users
@@ -189,20 +191,22 @@ DLE in front: STX, ETX, DLE, ETB, EOT, SYN. Text does not nest.
 echo "a	b"␃
 ```
 
-### Nested values (SI/CAN)
+### Nested values (DLE … CAN)
 
-When a field value is itself structured, wrap it in SI/CAN. Inside the
-brackets, the hierarchy starts over. Levels nest for arbitrary depth. A list
-is one record; a table is several; a map is a keyed record.
+When a field value is itself structured, open a nested level with DLE and
+close it with CAN. DLE means *recurse*: the code after it is the first code
+of a nested body, in which the hierarchy starts over. Levels nest for
+arbitrary depth. A list is one record; a table is several; a map is a keyed
+record; a level may even hold groups and files.
 
 ```
 ␝users
   ␁␞name␟roles␟address
-  ␞Alice␟␏␞Admin␟Editor␘␟␏␁␞street␟city␞123 Main␟Springfield␘
+  ␞Alice␟␐␞Admin␟Editor␘␟␐␁␞street␟city␞123 Main␟Springfield␘
 ```
 
-`␏␘` is an empty list; `␏␞␘` is a list holding one empty string. The text
-position directly after `␏` is reserved and must be empty.
+`␐␘` is an empty level; `␐␞␘` is a list holding one empty string. DLE is
+on the opener only, and must be followed by a code.
 
 ### Document (FS wrapper, depth via GS repetition)
 
@@ -245,9 +249,10 @@ US separates path segments: group → record id → field name.
 ### Comments (BEL)
 
 BEL begins a comment that runs to the end of the enclosing element (the next
-FS, GS, RS, SOH, SYN, EOT, ETB, BEL, or the closing CAN). A code directly
-after the BEL belongs to the comment, so a BEL in front of a record, group
-line, header row or nested value comments it out.
+FS, GS, RS, `␁␞`, DLE, SYN, EOT, ETB, EM, BEL, or the closing CAN). A code
+directly after the BEL belongs to the comment, so a BEL in front of a
+record, group line, header row or nested value comments it out. A comment
+in field position runs to the end of its record.
 
 ```
 ␇ settings for staging
@@ -277,7 +282,7 @@ length and optional hash. A reader stops at EM; any document may reference
 a blob by name.
 
 ```
-␖␁blob␟␏␁␞name␟offset␟length␟hash␞lamp␟0␟3072000␟sha256:cd34…␘
+␖␁blob␟␐␁␞name␟offset␟length␟hash␞lamp␟0␟3072000␟sha256:cd34…␘
 ␜catalogue␝items␁␞name␟photo␞Lamp␟lamp␄
 ␙…raw bytes…
 ```
@@ -310,7 +315,7 @@ Given a file `greeting.txt` containing `Hello world!`:
 ```
 ␖␁shape␟diff
 ␜greeting.txt
-  ␝Hello ␟world␚universe␟!
+  ␝␂Hello ␃␟world␚universe␟!
 ␄
 ```
 
@@ -318,7 +323,7 @@ This breaks down as:
 
 | Unit | Type | Search contributes | Replacement contributes |
 |------|------|-------------------|------------------------|
-| `Hello ` | anchor | `Hello ` | `Hello ` |
+| `␂Hello ␃` | anchor | `Hello ` | `Hello ` |
 | `world␚universe` | substitution | `world` | `universe` |
 | `!` | anchor | `!` | `!` |
 
@@ -335,17 +340,15 @@ You can anchor on one side, both sides, or use multiple substitutions:
   def ␃␟run␚start
 
 # Anchors before and after (more precise)
-␝Hello ␟world␚universe␟!
+␝␂Hello ␃␟world␚universe␟!
 
 # Multiple substitutions in one section
-␝x = ␟10␚20␟ + ␟5␚15
+␝␂x = ␃␟10␚20␟␂ + ␃␟5␚15
 # Finds "x = 10 + 5", produces "x = 20 + 15"
 ```
 
-Note that `Hello ` keeps its trailing space only because it is followed by
-US, where the space is data: whitespace next to a code is layout, so an
-anchor that begins or ends with whitespace, or spans lines, is written as
-text, as in the first example.
+Whitespace next to a code is layout, so an anchor that begins or ends with
+a space, or spans lines, is written as text; `world` and `!` need no fence.
 
 ### Atomicity Guarantee
 
@@ -371,9 +374,9 @@ substitution. A diff should carry `shape␟diff` in its heading.
 
 ## Escaping (DLE)
 
-DLE (0x10) exists only inside text, where it precedes one of six codes to
-make it a data byte: STX, ETX, DLE, ETB, EOT, SYN. Outside text no control
-code is data, and a DLE is an error.
+Inside text, DLE (0x10) precedes one of six codes to make it a data byte:
+STX, ETX, DLE, ETB, EOT, SYN. Outside text no control code is data, and
+DLE means recurse (see Nested values).
 
 ```
 ␞␂a␐␃b␃        the three bytes a, ETX, b
@@ -458,7 +461,7 @@ Bob,200
 ```
 ␝users
   ␁␞name␟roles␟address
-  ␞Alice␟␏␞Admin␟Editor␘␟␏␞␁street␟123 Main␁city␟Springfield␘
+  ␞Alice␟␐␞Admin␟Editor␘␟␐␞␁street␟123 Main␁city␟Springfield␘
 ```
 
 ```json

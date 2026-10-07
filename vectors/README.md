@@ -21,7 +21,10 @@ output. Edit `gen.py`, run `python3 vectors/gen.py`, commit both.
   JSON string (UTF-8; control characters as `\u001f`-style escapes),
   `{"hex": "..."}` for bytes that are not valid UTF-8, or
   `{"level": {"headers": [...] | null, "records": [...]}}` for a nested
-  level (SI … CAN).
+  level (DLE … CAN) holding records, `{"level": {"files": [...]}}` for one
+  holding files and groups (same shape as a decode case's `files`), or
+  `{"ref": "group"}` / `{"ref": ["group", "record", "field"]}` for a
+  reference (ENQ).
 - **Records** are a JSON array (positional) or `{"keys": [[k, v], ...]}`
   (keyed, SOH units, in written order).
 - **Headers** come from a header row, `SOH RS`.
@@ -46,9 +49,17 @@ Compact bytes → expected structure. Case shape:
     {"name": "users", "headers": ["a", "b"] | null,
      "records": [["field", {"hex": "00"}], {"keys": [["k", "v"]]}, ...]}
   ],
+  "files": [{"name": "a", "groups": [...]}, ...],   // optional: several FS files
+  "documents": [{"heading": [...], "file": ..., "groups": [...]}, ...],
+                                               // optional: a multi-document container
   "tail": "<hex>"                              // optional: raw bytes after EM
 }
 ```
+
+A group may carry `"sections": [...]`, its GS-repeated subsections, each
+of the same shape. When `files` or `documents` is present, `file` and
+`groups` describe the first file of the first document (and are empty
+when `documents` is given).
 
 A single group with `"name": ""` and `"file": null` means the buffer is
 a bare record stream. Expected records follow the contract exactly: N
@@ -145,7 +156,7 @@ the committed region, headings and header rows excluded.
 
 ### nested.json
 
-Nested levels in a single record, and the list convenience. Case shape:
+Nested levels (DLE … CAN) in a single record, and the list convenience. Case shape:
 
 ```json
 {"name": "...", "desc": "...", "bytes": "<hex>",

@@ -11,7 +11,7 @@ import pathlib
 GLYPHS = {
     "␀": 0x00, "␁": 0x01, "␂": 0x02, "␃": 0x03, "␄": 0x04, "␅": 0x05,
     "␆": 0x06, "␇": 0x07, "␈": 0x08, "␉": 0x09, "␊": 0x0A, "␋": 0x0B,
-    "␌": 0x0C, "␍": 0x0D, "␎": 0x0E, "␏": 0x0F, "␐": 0x10, "␑": 0x11,
+    "␌": 0x0C, "␍": 0x0D, "␎": 0x0E, "␐": 0x0F, "␐": 0x10, "␑": 0x11,
     "␒": 0x12, "␓": 0x13, "␔": 0x14, "␕": 0x15, "␖": 0x16, "␗": 0x17,
     "␘": 0x18, "␙": 0x19, "␚": 0x1A, "␛": 0x1B, "␜": 0x1C, "␝": 0x1D,
     "␞": 0x1E, "␟": 0x1F,
@@ -54,13 +54,18 @@ OUT = pathlib.Path(__file__).parent
 decode = []
 
 
-def dec(name, desc, bytes_, groups, file=None, heading=None, tail=None):
+def dec(name, desc, bytes_, groups, file=None, heading=None, tail=None,
+        files=None, documents=None):
     c = {"name": name, "desc": desc, "bytes": h(bytes_), "file": file,
          "groups": groups}
     if heading is not None:
         c["heading"] = heading
     if tail is not None:
         c["tail"] = h(tail)
+    if files is not None:
+        c["files"] = files
+    if documents is not None:
+        c["documents"] = documents
     decode.append(c)
 
 
@@ -123,26 +128,48 @@ dec("keyed-records-as-written",
     "␞␁b␟1␁a␟2␁b␟3",
     [g("", [keyed(("b", "1"), ("a", "2"), ("b", "3"))])])
 dec("nested-list", "A nested level holding one record is a list",
-    "␞Alice␟␏␞Admin␟Editor␘␟x",
+    "␞Alice␟␐␞Admin␟Editor␘␟x",
     [g("", [["Alice", level([["Admin", "Editor"]]), "x"]])])
 dec("nested-empty", "An empty level holds no records",
-    "␞␏␘␟x", [g("", [[level([]), "x"]])])
+    "␞␐␘␟x", [g("", [[level([]), "x"]])])
 dec("nested-one-empty", "A level holding one empty record: a list of one empty string",
-    "␞␏␞␘", [g("", [[level([[""]])]])])
+    "␞␐␞␘", [g("", [[level([[""]])]])])
 dec("nested-table", "Several records in a level form a table",
-    "␞␏␞1␟2␞3␟4␘", [g("", [[level([["1", "2"], ["3", "4"]])]])])
+    "␞␐␞1␟2␞3␟4␘", [g("", [[level([["1", "2"], ["3", "4"]])]])])
 dec("nested-header-row", "A header row inside a level names its columns",
-    "␞Alice␟␏␁␞street␟city␞1 Main␟Springfield␘",
+    "␞Alice␟␐␁␞street␟city␞1 Main␟Springfield␘",
     [g("", [["Alice", level([["1 Main", "Springfield"]], ["street", "city"])]])])
 dec("nested-map", "A keyed record inside a level is a map value",
-    "␞␏␞␁a␟1␁b␟2␘", [g("", [[level([keyed(("a", "1"), ("b", "2"))])]])])
+    "␞␐␞␁a␟1␁b␟2␘", [g("", [[level([keyed(("a", "1"), ("b", "2"))])]])])
 dec("nested-nested", "Levels nest",
-    "␞␏␞␏␞a␟b␘␟c␘", [g("", [[level([[level([["a", "b"]]), "c"]])]])])
-dec("nested-text-inside", "Text inside a level; RS, SI and CAN inside the text are characters",
-    "␞␏␞␂x␞y␏z␘w␃␟p␘", [g("", [[level([["x\x1ey\x0fz\x18w", "p"]])]])])
-dec("nested-layout", "Layout inside a level is layout",
-    "␞␏␊  ␁␞a␟b␊  ␞1␟2␊␘",
+    "␞␐␞␐␞a␟b␘␟c␘", [g("", [[level([[level([["a", "b"]]), "c"]])]])])
+dec("nested-text-inside", "Text inside a level; RS, SOH and CAN inside the text are characters",
+    "␞␐␞␂x␞y␁z␘w␃␟p␘", [g("", [[level([["x\x1ey\x01z\x18w", "p"]])]])])
+dec("nested-layout", "Layout inside a level is layout, after the opener too",
+    "␞␐␊  ␁␞a␟b␊  ␞1␟2␊␘",
     [g("", [[level([["1", "2"]], ["a", "b"])]])])
+dec("nested-empty-level", "DLE CAN is the empty level (no body)",
+    "␞␐␘␟x", [g("", [[level([]), "x"]])])
+dec("nested-document", "A level may hold a whole body: groups and files",
+    "␞doc␟␐␜f␝g1␞a␝g2␁␞x␞b␘",
+    [g("", [["doc", {"level": {"files": [{"name": "f", "groups": [g("g1", [["a"]]), g("g2", [["b"]], ["x"])]}]}}]])])
+dec("reference-group", "ENQ with a plain name is a group reference; reported as written",
+    "␞a␟␅tags", [g("", [["a", {"ref": "tags"}]])])
+dec("reference-path", "ENQ with text is a path; segments split on US",
+    "␞a␟␅␂tags␟001␟label␃", [g("", [["a", {"ref": ["tags", "001", "label"]}]])])
+dec("gs-depth", "GS repetition is depth; subsections belong to the group",
+    "␝c1␞p1␝␝s1␞p2␝c2␞p3",
+    [{"name": "c1", "headers": None, "records": [["p1"]],
+      "sections": [{"name": "s1", "headers": None, "records": [["p2"]]}]},
+     g("c2", [["p3"]])])
+dec("two-files", "A document may hold several FS files",
+    "␜a␝g␞1␜b␝g␞2",
+    [], file="a", files=[{"name": "a", "groups": [g("g", [["1"]])]},
+                         {"name": "b", "groups": [g("g", [["2"]])]}])
+dec("records-before-first-gs", "Records before the first GS form the unnamed group",
+    "␜db␞a␝g␞b", [g("", [["a"]]), g("g", [["b"]])], file="db")
+dec("etb-payload-tolerated", "Outside stream mode an ETB and its payload are a no-op",
+    "␞a␗sha256:00␞b", [g("", [["a"], ["b"]])])
 dec("bare-records", "Records with no FS/GS preamble (e.g. a stream log body)",
     "␞a␟b␞c␟d", [g("", [["a", "b"], ["c", "d"]])])
 dec("multi-group-document", "FS file name with two GS groups",
@@ -158,14 +185,17 @@ dec("header-no-records", "Group with a header row and zero records",
 dec("heading-empty", "SYN with an empty heading, EOT at the end",
     "␖␝g␞a␄", [g("g", [["a"]])], heading=[])
 dec("heading-keys", "The heading is keyed units after SYN",
-    "␖␁shape␟stream␁version␟1␞a␟b",
-    [g("", [["a", "b"]])], heading=[["shape", "stream"], ["version", "1"]])
+    "␖␁shape␟tabular␁version␟1␞a␟b",
+    [g("", [["a", "b"]])], heading=[["shape", "tabular"], ["version", "1"]])
 dec("heading-then-header-row",
-    "SOH RS ends the heading and is the log's header row",
-    "␖␁shape␟stream␁␞x␟y␞1␟2",
-    [g("", [["1", "2"]], ["x", "y"])], heading=[["shape", "stream"]])
+    "SOH RS ends the heading and is the body's header row",
+    "␖␁version␟1␁␞x␟y␞1␟2",
+    [g("", [["1", "2"]], ["x", "y"])], heading=[["version", "1"]])
+dec("heading-layout-between-soh-rs", "Layout between SOH and RS is still a header row",
+    "␖␁version␟1␊␁ ␞x␟y␊␞1␟2",
+    [g("", [["1", "2"]], ["x", "y"])], heading=[["version", "1"]])
 dec("heading-nested-value", "A heading value may be a level (the blob table)",
-    "␖␁blob␟␏␁␞name␟offset␟length␞img␟0␟3␘␝g␞a",
+    "␖␁blob␟␐␁␞name␟offset␟length␞img␟0␟3␘␝g␞a",
     [g("g", [["a"]])],
     heading=[["blob", level([["img", "0", "3"]], ["name", "offset", "length"])]])
 dec("comment-record", "BEL before a record comments it out, up to the next RS",
@@ -175,11 +205,21 @@ dec("comment-note", "A plain note after a group label",
 dec("comment-header-row", "A commented-out header row declares nothing",
     "␝g␇␁␞x␟y␞a", [g("g", [["a"]])])
 dec("comment-in-level", "Comments are allowed inside a level",
-    "␞␏␇␞x␞y␘", [g("", [[level([["y"]])]])])
+    "␞␐␇␞x␞y␘", [g("", [[level([["y"]])]])])
+dec("comment-in-field-position", "A comment in field position ends the record's content",
+    "␞Alice␟␇␐␞Admin␘␟100␞Bob", [g("", [["Alice", ""], ["Bob"]])])
+dec("comment-swallows-keyed-unit", "A bare SOH inside a comment is content",
+    "␞␁a␟1␇n␁b␟2␞x", [g("", [keyed(("a", "1")), ["x"]])])
+dec("comment-ends-at-header-row", "A comment ends at a header row",
+    "␝g␇note␁␞x␟y␞1␟2", [g("g", [["1", "2"]], ["x", "y"])])
 dec("comment-with-text", "Text inside a comment is content of the comment",
     "␝g␇␂␞not a record␃␞a", [g("g", [["a"]])])
+dec("two-documents", "Two documents in one container, each with its own SYN",
+    "␖␝g␞a␄␖␝g␞b␄", [], documents=[
+        {"heading": [], "file": None, "groups": [g("g", [["a"]])]},
+        {"heading": [], "file": None, "groups": [g("g", [["b"]])]}])
 dec("em-stops-reading", "Everything after EM is the raw tail, not scanned",
-    "␖␁blob␟␏␁␞name␟offset␟length␞t␟0␟3␘␝g␞a␙x␞y",
+    "␖␁blob␟␐␁␞name␟offset␟length␞t␟0␟3␘␝g␞a␙x␞y",
     [g("g", [["a"]])],
     heading=[["blob", level([["t", "0", "3"]], ["name", "offset", "length"])]],
     tail="x␞y")
@@ -217,7 +257,7 @@ enc("empty-string-plain", "The empty string is written as nothing",
     doc([g("", [["", "a", ""]])]), "␞␟a␟")
 enc("binary-run", "Bytes 0x00–0x1F in a value: text, with only the six escaped",
     doc([g("", [[{"hex": bytes(range(32)).hex()}]])]),
-    "␞␂␀␁␐␂␐␃␐␄␅␆␇␈␉␊␋␌␍␎␏␐␐␑␒␓␔␕␐␖␐␗␘␙␚␛␜␝␞␟␃")
+    "␞␂␀␁␐␂␐␃␐␄␅␆␇␈␉␊␋␌␍␎␐␐␐␑␒␓␔␕␐␖␐␗␘␙␚␛␜␝␞␟␃")
 enc("high-bytes-unescaped", "No byte >= 0x20 is ever fenced (UTF-8 passes through)",
     doc([g("", [["héllo", "日本"]])]), "␞héllo␟日本")
 enc("keyed-record-sorted", "A map encodes as a keyed record with keys sorted bytewise",
@@ -227,16 +267,19 @@ enc("keyed-byte-lex", "Key order is by raw byte: 'Z' (0x5a) before 'a' (0x61)",
     doc([g("", [keyed(("a", "1"), ("Z", "2"))])]), "␞␁Z␟2␁a␟1")
 enc("nested-list", "A list is a level holding one record",
     doc([g("", [["Alice", level([["Admin", "Editor"]])]])]),
-    "␞Alice␟␏␞Admin␟Editor␘")
-enc("nested-empty", "An empty list is an empty level", doc([g("", [[level([])]])]), "␞␏␘")
+    "␞Alice␟␐␞Admin␟Editor␘")
+enc("nested-empty", "An empty list is an empty level", doc([g("", [[level([])]])]), "␞␐␘")
 enc("nested-one-empty", "A list of one empty string is a level with one empty record",
-    doc([g("", [[level([[""]])]])]), "␞␏␞␘")
+    doc([g("", [[level([[""]])]])]), "␞␐␞␘")
+enc("nested-empty-level", "An empty level is DLE CAN", doc([g("", [[level([]), "x"]])]), "␞␐␘␟x")
+enc("reference-plain", "A group reference is plain, never text",
+    doc([g("", [[{"ref": "tags"}, {"ref": ["tags", "001"]}]])]), "␞␅tags␟␅␂tags␟001␃")
 enc("nested-map", "A map value is a level holding one keyed record, sorted",
     doc([g("", [["cfg", level([keyed(("b", "2"), ("a", "1"))])]])]),
-    "␞cfg␟␏␞␁a␟1␁b␟2␘")
+    "␞cfg␟␐␞␁a␟1␁b␟2␘")
 enc("nested-table-header", "A nested table with a header row",
     doc([g("", [[level([["1 Main", "Springfield"]], ["street", "city"])]])]),
-    "␞␏␁␞street␟city␞1 Main␟Springfield␘")
+    "␞␐␁␞street␟city␞1 Main␟Springfield␘")
 enc("file-two-groups", "Document with FS name and two groups; the canonical unit has no framing",
     doc([g("g1", [["a"]]), g("g2", [["b"]], ["x"])], file="db"),
     "␜db␝g1␞a␝g2␁␞x␞b")
@@ -279,13 +322,15 @@ can("syn-heading", "SYN and the heading are framing: not part of a canonical doc
 can("comment", "A comment is outside the hash: not part of a canonical unit",
     "␝g␇note␞a", True, False)
 can("raw-lf-in-plain", "LF inside a plain value: malformed", "␞a␊b", False, False)
-can("dle-outside-text", "DLE outside text: malformed", "␞a␐b", False, False)
+can("dle-mid-value", "DLE in the middle of a plain value: malformed", "␞a␐b", False, False)
 can("dle-before-plain-in-text", "DLE before a byte that is not one of the six: malformed",
     "␞␂a␐bc␃", False, False)
 can("dangling-dle", "DLE at end of input: malformed", "␞␂a␐", False, False)
 can("unassigned-code", "Bare unassigned control byte: malformed", "␞a␆b", False, False)
 can("so-byte", "SO is permanently unassigned", "␞a␎b", False, False)
-can("level-label", "Text after SI is reserved: malformed", "␞␏x␞a␘", False, False)
+can("dle-before-plain", "DLE outside text must be followed by a code: malformed", "␞␐x␞a␘", False, False)
+can("empty-level", "DLE CAN is the empty level: canonical", "␞␐␘", True, True)
+can("text-reference", "A group reference written as text: not canonical", "␞␅␂tags␃", True, False)
 can("mixed-record", "A record is positional or keyed, never mixed", "␞a␁k␟v", False, False)
 
 # ---------------------------------------------------------------- invalid
@@ -301,17 +346,23 @@ inv("unassigned-ack", "ACK (0x06) is unassigned", "␞␆")
 inv("unassigned-so", "SO (0x0E) is permanently unassigned", "␞␎")
 inv("raw-lf-in-plain", "LF in the middle of a plain value", "␞a␊b")
 inv("raw-tab-in-plain", "HT in the middle of a plain value", "␞a␉b")
-inv("dle-outside-text", "DLE has no meaning outside text", "␞a␐␟b")
+inv("dle-before-us", "DLE must be followed by a structural code or CAN", "␞a␟␐␟b")
+inv("dle-before-plain", "DLE followed by a plain byte outside text", "␞␐x␘")
 inv("dle-before-plain-in-text", "DLE inside text before a byte that is not one of the six", "␞␂a␐bc␃")
 inv("dangling-dle", "DLE at end of input has nothing to escape", "␞␂a␐")
 inv("text-unclosed", "Text open at end of input", "␞␂abc")
 inv("stx-inside-text", "Text does not nest", "␞␂a␂b␃␃")
 inv("text-spliced", "Text cannot be part of a plain value", "␞a␂b␃c")
 inv("etx-unmatched", "ETX with no open text", "␞a␃")
-inv("level-unclosed", "A level open at end of input", "␞␏␞a")
+inv("level-unclosed", "A level open at end of input", "␞␐␞a")
 inv("can-unmatched", "CAN with no open level", "␞a␘")
-inv("level-label", "Text after SI is reserved", "␞␏rgb␞1␟2␟3␘")
-inv("text-after-can", "Text after CAN belongs to nothing", "␞␏␘x")
+inv("header-row-mid-group", "A header row is only the first item of a group", "␝g␞1␁␞x␞2")
+inv("us-after-keyed-value", "US after a keyed value is a mixed record", "␞␁a␟1␟2")
+inv("sub-outside-diff", "SUB has no meaning outside a diff", "␞a␚b")
+inv("bytes-after-eot", "After EOT only layout, SYN or EM may follow", "␖␞a␄x")
+inv("reference-empty-name", "A reference needs a name", "␞␅␟x")
+inv("em-inside-level", "EM while a level is open", "␞␐␞a␙raw")
+inv("text-after-can", "Text after CAN belongs to nothing", "␞␐␘x")
 inv("mixed-record", "Positional then keyed units in one record", "␞a␁k␟v")
 inv("key-without-value", "SOH, key, then a record-level code with no US", "␞␁k␞x")
 inv("name-with-text", "Labels and keys are never text", "␝␂g␃␞a")
@@ -342,7 +393,7 @@ st("escaped-etb-in-text-not-commit", "DLE ETB inside text is data; nothing is co
 st("etb-in-text-cuts", "A raw ETB inside open text is a commit: the block is damaged, and later commits are found",
    "␞␂a␗␞b␗", 7, False, ["␞␂a", "␞b"], damaged=[0])
 st("etb-in-level-cuts", "A raw ETB inside an open level is a commit: that block is damaged",
-   "␞␏␞a␗␞b␗", 8, False, ["␞␏␞a", "␞b"], damaged=[0])
+   "␞␐␞a␗␞b␗", 8, False, ["␞␐␞a", "␞b"], damaged=[0])
 st("heading-committed", "The SYN heading is committed with the first ETB like anything else",
    "␖␁shape␟stream␗␞a␗", 18, False, ["␖␁shape␟stream", "␞a"], [["a"]])
 st("header-row-committed", "A header row is committed like a record",
@@ -351,6 +402,9 @@ st("payload-in-committed-region", "ETB payload extends committed_end but is excl
    "␞a␗sha256:00␞b␗", 15, False, ["␞a", "␞b"], [["a"], ["b"]])
 st("torn-open-text", "A tail that leaves text open is torn", "␞a␗␞␂b", 3, True, ["␞a"], [["a"]])
 st("torn-lone-dle", "A tail ending in a lone DLE is torn", "␞a␗␞␂b␐", 3, True, ["␞a"], [["a"]])
+st("tail-only-layout", "A tail of layout alone is not torn", "␞a␗␊", 3, False, ["␞a"], [["a"]])
+st("tail-eot", "EOT after the last commit closes the log and is not torn", "␞a␗␄", 3, False, ["␞a"], [["a"]])
+st("tail-comment", "A comment after the last commit is not torn", "␞a␗␇bye", 3, False, ["␞a"], [["a"]])
 st("empty-stream", "Empty buffer: no commits, not torn", "", 0, False, [])
 
 # ----------------------------------------------------------------- nested
@@ -367,29 +421,27 @@ def lst(*items):
 
 
 ne("three-items", "A list of three plain items between two scalar fields",
-   "␞Alice␟␏␞Admin␟Editor␟User␘␟100", ["Alice", lst("Admin", "Editor", "User"), "100"])
-ne("empty-list", "An empty level is an empty list", "␞a␟␏␘", ["a", lst()])
+   "␞Alice␟␐␞Admin␟Editor␟User␘␟100", ["Alice", lst("Admin", "Editor", "User"), "100"])
 ne("one-empty-item", "A level with one empty record is a list of one empty string",
-   "␞a␟␏␞␘", ["a", lst("")])
+   "␞a␟␐␞␘", ["a", lst("")])
 ne("two-empty-items", "A lone US in the record yields two empty items",
-   "␞a␟␏␞␟␘", ["a", lst("", "")])
-ne("single-item", "One item, no separator", "␞a␟␏␞x␘", ["a", lst("x")])
+   "␞a␟␐␞␟␘", ["a", lst("", "")])
+ne("single-item", "One item, no separator", "␞a␟␐␞x␘", ["a", lst("x")])
 ne("two-lists", "Adjacent list fields; CAN closes one before the next US",
-   "␞a␟␏␞1␟2␘␟␏␞3␘", ["a", lst("1", "2"), lst("3")])
+   "␞a␟␐␞1␟2␘␟␐␞3␘", ["a", lst("1", "2"), lst("3")])
 ne("text-item", "An item holding a control byte is text inside the level",
-   "␞a␟␏␞␂x␟y␃␟z␘", ["a", lst("x\x1fy", "z")])
+   "␞a␟␐␞␂x␟y␃␟z␘", ["a", lst("x\x1fy", "z")])
 ne("binary-item", "A binary item is text; 0xFF is raw",
-   "␞a␟␏␞␂␀\\xff␃␘", ["a", lst({"hex": "00ff"})])
+   "␞a␟␐␞␂␀\\xff␃␘", ["a", lst({"hex": "00ff"})])
 ne("list-in-list", "A nested level inside an item is a nested list",
-   "␞a␟␏␞␏␞x␟y␘␟z␘", ["a", lst(lst("x", "y"), "z")])
+   "␞a␟␐␞␐␞x␟y␘␟z␘", ["a", lst(lst("x", "y"), "z")])
 ne("map-item", "A keyed record inside a level is a map, not a list",
-   "␞a␟␏␞␁k␟v␘", ["a", level([keyed(("k", "v"))])])
+   "␞a␟␐␞␁k␟v␘", ["a", level([keyed(("k", "v"))])])
 ne("table-not-a-list", "Two records in a level form a table; the list accessor rejects it",
-   "␞a␟␏␞1␟2␞3␟4␘", ["a", level([["1", "2"], ["3", "4"]])])
+   "␞a␟␐␞1␟2␞3␟4␘", ["a", level([["1", "2"], ["3", "4"]])])
 ne("header-row-in-level", "A level with a header row is a named-column table",
-   "␞a␟␏␁␞x␟y␞1␟2␘", ["a", level([["1", "2"]], ["x", "y"])])
-ne("plain-field-as-list", "Reading a non-level field as a list yields its value as one item (decode only)",
-   "␞a␟b", ["a", lst("b")], canonical_=False)
+   "␞a␟␐␁␞x␟y␞1␟2␘", ["a", level([["1", "2"]], ["x", "y"])])
+ne("empty-level", "DLE CAN: an empty level, read as an empty list", "␞a␟␐␘", ["a", lst()])
 
 # ---------------------------------------------------------- map-canonical
 mapc = []
@@ -409,7 +461,7 @@ mc("empty-key-first", "The empty key sorts before any non-empty key",
    None, [["a", "1"], ["", "0"]], "␞␁␟0␁a␟1")
 mc("nested-map-recurse", "A value that is itself a map is a level holding a keyed record, sorted recursively",
    "cfg", [["z", "26"], ["nested", {"map": [["b", "2"], ["a", "1"]]}]],
-   "␝cfg␞␁nested␟␏␞␁a␟1␁b␟2␘␁z␟26")
+   "␝cfg␞␁nested␟␐␞␁a␟1␁b␟2␘␁z␟26")
 mc("text-value", "A value needing text is fenced; keys are names and never are",
    None, [["k", "a\nb"]], "␞␁k␟␂a␊b␃")
 

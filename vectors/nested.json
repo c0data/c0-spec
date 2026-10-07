@@ -4,7 +4,7 @@
     {
       "name": "three-items",
       "desc": "A list of three plain items between two scalar fields",
-      "bytes": "1e416c6963651f0f1e41646d696e1f456469746f721f55736572181f313030",
+      "bytes": "1e416c6963651f101e41646d696e1f456469746f721f55736572181f313030",
       "record": [
         "Alice",
         {
@@ -19,21 +19,9 @@
       "canonical": true
     },
     {
-      "name": "empty-list",
-      "desc": "An empty level is an empty list",
-      "bytes": "1e611f0f18",
-      "record": [
-        "a",
-        {
-          "list": []
-        }
-      ],
-      "canonical": true
-    },
-    {
       "name": "one-empty-item",
       "desc": "A level with one empty record is a list of one empty string",
-      "bytes": "1e611f0f1e18",
+      "bytes": "1e611f101e18",
       "record": [
         "a",
         {
@@ -47,7 +35,7 @@
     {
       "name": "two-empty-items",
       "desc": "A lone US in the record yields two empty items",
-      "bytes": "1e611f0f1e1f18",
+      "bytes": "1e611f101e1f18",
       "record": [
         "a",
         {
@@ -62,7 +50,7 @@
     {
       "name": "single-item",
       "desc": "One item, no separator",
-      "bytes": "1e611f0f1e7818",
+      "bytes": "1e611f101e7818",
       "record": [
         "a",
         {
@@ -76,7 +64,7 @@
     {
       "name": "two-lists",
       "desc": "Adjacent list fields; CAN closes one before the next US",
-      "bytes": "1e611f0f1e311f32181f0f1e3318",
+      "bytes": "1e611f101e311f32181f101e3318",
       "record": [
         "a",
         {
@@ -96,7 +84,7 @@
     {
       "name": "text-item",
       "desc": "An item holding a control byte is text inside the level",
-      "bytes": "1e611f0f1e02781f79031f7a18",
+      "bytes": "1e611f101e02781f79031f7a18",
       "record": [
         "a",
         {
@@ -111,7 +99,7 @@
     {
       "name": "binary-item",
       "desc": "A binary item is text; 0xFF is raw",
-      "bytes": "1e611f0f1e0200ff0318",
+      "bytes": "1e611f101e0200ff0318",
       "record": [
         "a",
         {
@@ -127,7 +115,7 @@
     {
       "name": "list-in-list",
       "desc": "A nested level inside an item is a nested list",
-      "bytes": "1e611f0f1e0f1e781f79181f7a18",
+      "bytes": "1e611f101e101e781f79181f7a18",
       "record": [
         "a",
         {
@@ -147,7 +135,7 @@
     {
       "name": "map-item",
       "desc": "A keyed record inside a level is a map, not a list",
-      "bytes": "1e611f0f1e016b1f7618",
+      "bytes": "1e611f101e016b1f7618",
       "record": [
         "a",
         {
@@ -171,7 +159,7 @@
     {
       "name": "table-not-a-list",
       "desc": "Two records in a level form a table; the list accessor rejects it",
-      "bytes": "1e611f0f1e311f321e331f3418",
+      "bytes": "1e611f101e311f321e331f3418",
       "record": [
         "a",
         {
@@ -195,7 +183,7 @@
     {
       "name": "header-row-in-level",
       "desc": "A level with a header row is a named-column table",
-      "bytes": "1e611f0f011e781f791e311f3218",
+      "bytes": "1e611f10011e781f791e311f3218",
       "record": [
         "a",
         {
@@ -216,18 +204,16 @@
       "canonical": true
     },
     {
-      "name": "plain-field-as-list",
-      "desc": "Reading a non-level field as a list yields its value as one item (decode only)",
-      "bytes": "1e611f62",
+      "name": "empty-level",
+      "desc": "DLE CAN: an empty level, read as an empty list",
+      "bytes": "1e611f1018",
       "record": [
         "a",
         {
-          "list": [
-            "b"
-          ]
+          "list": []
         }
       ],
-      "canonical": false
+      "canonical": true
     }
   ]
 }

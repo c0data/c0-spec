@@ -146,7 +146,7 @@
           }
         ]
       },
-      "canonical": "1e02000110021003100405060708090a0b0c0d0e0f101011121314151016101718191a1b1c1d1e1f03"
+      "canonical": "1e02000110021003100405060708090a0b0c0d0e10101011121314151016101718191a1b1c1d1e1f03"
     },
     {
       "name": "high-bytes-unescaped",
@@ -252,7 +252,7 @@
           }
         ]
       },
-      "canonical": "1e416c6963651f0f1e41646d696e1f456469746f7218"
+      "canonical": "1e416c6963651f101e41646d696e1f456469746f7218"
     },
     {
       "name": "nested-empty",
@@ -276,7 +276,7 @@
           }
         ]
       },
-      "canonical": "1e0f18"
+      "canonical": "1e1018"
     },
     {
       "name": "nested-one-empty",
@@ -304,7 +304,59 @@
           }
         ]
       },
-      "canonical": "1e0f1e18"
+      "canonical": "1e101e18"
+    },
+    {
+      "name": "nested-empty-level",
+      "desc": "An empty level is DLE CAN",
+      "build": {
+        "file": null,
+        "groups": [
+          {
+            "name": "",
+            "headers": null,
+            "records": [
+              [
+                {
+                  "level": {
+                    "headers": null,
+                    "records": []
+                  }
+                },
+                "x"
+              ]
+            ]
+          }
+        ]
+      },
+      "canonical": "1e10181f78"
+    },
+    {
+      "name": "reference-plain",
+      "desc": "A group reference is plain, never text",
+      "build": {
+        "file": null,
+        "groups": [
+          {
+            "name": "",
+            "headers": null,
+            "records": [
+              [
+                {
+                  "ref": "tags"
+                },
+                {
+                  "ref": [
+                    "tags",
+                    "001"
+                  ]
+                }
+              ]
+            ]
+          }
+        ]
+      },
+      "canonical": "1e05746167731f0502746167731f30303103"
     },
     {
       "name": "nested-map",
@@ -342,7 +394,7 @@
           }
         ]
       },
-      "canonical": "1e6366671f0f1e01611f3101621f3218"
+      "canonical": "1e6366671f101e01611f3101621f3218"
     },
     {
       "name": "nested-table-header",
@@ -374,7 +426,7 @@
           }
         ]
       },
-      "canonical": "1e0f011e7374726565741f636974791e31204d61696e1f537072696e676669656c6418"
+      "canonical": "1e10011e7374726565741f636974791e31204d61696e1f537072696e676669656c6418"
     },
     {
       "name": "file-two-groups",

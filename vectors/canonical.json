@@ -107,8 +107,8 @@
       "canonical": false
     },
     {
-      "name": "dle-outside-text",
-      "desc": "DLE outside text: malformed",
+      "name": "dle-mid-value",
+      "desc": "DLE in the middle of a plain value: malformed",
       "bytes": "1e611062",
       "wellformed": false,
       "canonical": false
@@ -142,10 +142,24 @@
       "canonical": false
     },
     {
-      "name": "level-label",
-      "desc": "Text after SI is reserved: malformed",
-      "bytes": "1e0f781e6118",
+      "name": "dle-before-plain",
+      "desc": "DLE outside text must be followed by a code: malformed",
+      "bytes": "1e10781e6118",
       "wellformed": false,
+      "canonical": false
+    },
+    {
+      "name": "empty-level",
+      "desc": "DLE CAN is the empty level: canonical",
+      "bytes": "1e1018",
+      "wellformed": true,
+      "canonical": true
+    },
+    {
+      "name": "text-reference",
+      "desc": "A group reference written as text: not canonical",
+      "bytes": "1e05027461677303",
+      "wellformed": true,
       "canonical": false
     },
     {
