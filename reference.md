@@ -458,119 +458,25 @@ best        4.09 ms       2447.7 MB/s
 
 ## c0fmt CLI
 
-Command-line tool for converting and inspecting C0DATA.
-
-### Build
-
-```sh
-crystal build src/c0fmt.cr -o bin/c0fmt --release
-```
-
-### Commands
-
-#### import
+Command-line tool for converting and inspecting C0DATA, its own shard at
+[c0data/c0-fmt](https://github.com/c0data/c0-fmt) (`shards build
+--release`). Every command reads a file or stdin in either form, compact
+or pretty.
 
 ```
-c0fmt import [format] [file]
+c0fmt import [format] [file]   CSV, JSON or YAML → C0DATA (-g group name)
+c0fmt export <format> [file]   C0DATA → csv (-g which group), json, yaml
+c0fmt pretty [file]            compact → pretty (-a aligns table columns)
+c0fmt compact [file]           pretty → compact
+c0fmt validate [file]          well-formedness; -c also canonical form,
+                               -s a stream log (torn tail, damaged blocks)
 ```
 
-Import CSV, JSON, or YAML into C0DATA compact format.
-
-- **format** -- `csv`, `json`, or `yaml`. Optional: auto-detected from file
-  extension (`.csv`, `.json`, `.yaml`, `.yml`) or content sniffing.
-- **file** -- input file. Reads stdin if omitted.
-- **-o FILE** -- write output to file instead of stdout.
-- **-g NAME** -- group name (defaults to filename stem or `data`).
-
-```sh
-c0fmt import data.csv                      # auto-detect from extension
-c0fmt import csv data.csv                  # explicit format
-echo '{"a":1}' | c0fmt import              # sniff stdin (detects JSON)
-cat data.csv | c0fmt import csv            # explicit format, stdin
-c0fmt import data.json -g mydata           # custom group name
-```
-
-#### export
-
-```
-c0fmt export <format> [file]
-```
-
-Export C0DATA to CSV, JSON, or YAML.
-
-- **format** -- `csv`, `json`, or `yaml`. Required.
-- **file** -- input C0DATA file. Reads stdin if omitted.
-- **-o FILE** -- write output to file.
-
-```sh
-c0fmt import data.csv | c0fmt export json
-c0fmt export yaml data.c0
-c0fmt export csv data.c0 -o data.csv
-```
-
-#### pretty
-
-```
-c0fmt pretty [file]
-```
-
-Convert C0DATA to pretty-printed Unicode form. Auto-detects whether
-input is already pretty or compact.
-
-- **-o FILE** -- write output to file.
-
-```sh
-c0fmt pretty data.c0
-cat data.c0 | c0fmt pretty
-```
-
-#### compact
-
-```
-c0fmt compact [file]
-```
-
-Convert C0DATA to compact binary form.
-
-- **-o FILE** -- write output to file.
-
-```sh
-c0fmt compact pretty.c0 -o data.c0
-```
-
-#### validate
-
-```
-c0fmt validate [file]
-```
-
-Check well-formedness of a C0DATA document. Prints `valid` to stderr
-and exits 0, or prints the error and exits 1.
-
-```sh
-c0fmt validate data.c0
-```
-
-### Pipelines
-
-Commands compose via stdin/stdout:
-
-```sh
-# CSV to JSON
-c0fmt import data.csv | c0fmt export json
-
-# JSON to pretty C0DATA
-c0fmt import config.json | c0fmt pretty
-
-# YAML to compact C0DATA file
-c0fmt import settings.yml | c0fmt compact -o data.c0
-
-# Round-trip: CSV → C0DATA → CSV
-c0fmt import csv users.csv | c0fmt export csv
-```
-
-
----
+Export maps a header row to objects, a keyed record to an object, a nested
+level to a list or table, and a reference to `{"$ref": "group/record"}`
+(JSON, YAML) or its path (CSV). `validate` prints reader warnings (a
+missing SYN heading, an unknown heading key) without failing; `-c` names
+each reason a file is not canonical. Exit status is 0 when valid.
 
 ## Crystal API
 
