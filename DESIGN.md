@@ -172,9 +172,8 @@ implies EM.
 Readers distinguish two levels:
 
 - A **warning** means the input is legal but not what a careful writer
-  produces: layout where canonical form has none, an empty text, heading keys
-  out of canonical order, a duplicate key, text around a value that could be
-  plain.
+  produces: layout where canonical form has none, an empty text, a duplicate
+  key, text around a value that could be plain.
 - A **loud warning** means the input may not be what it claims to be: no SYN
   at the start of a file, no EOT at the end of a document that is not a log,
   a heading key or a `shape` or `version` value the reader does not know, a
