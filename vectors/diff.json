@@ -222,6 +222,108 @@
       "error": true
     },
     {
+      "name": "dead-file-line",
+      "desc": "A dead FS kills only the path line; what follows attaches to the previous file",
+      "files": {
+        "a.txt": "foo baz\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741d666f6f1a464f4f071c622e7478741d62617a1a42415a04",
+      "result": {
+        "a.txt": "FOO BAZ\n"
+      }
+    },
+    {
+      "name": "dead-section-replace-attaches",
+      "desc": "RS lines after a dead GS attach to the previous live section",
+      "files": {
+        "a.txt": "A x\nC x\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741d41071d431e781a7904",
+      "result": {
+        "a.txt": "A y\nC y\n"
+      }
+    },
+    {
+      "name": "text-note-in-body",
+      "desc": "A text note between lines is skipped",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c612e74787407026e6f7465201e207769746820636f646573031d666f6f1a62617204",
+      "result": {
+        "a.txt": "bar\n"
+      }
+    },
+    {
+      "name": "note-in-pattern",
+      "desc": "A note after a unit is not a unit",
+      "files": {
+        "a.txt": "ab\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741d61076e1f621a6304",
+      "result": {
+        "a.txt": "ac\n"
+      }
+    },
+    {
+      "name": "commit-tolerated",
+      "desc": "An ETB between lines is a no-op",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741d666f6f1a6261721704",
+      "result": {
+        "a.txt": "bar\n"
+      }
+    },
+    {
+      "name": "overlapping-ambiguous",
+      "desc": "Matches are counted at every position: aa occurs twice in aaa",
+      "files": {
+        "a.txt": "aaa\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741d61611a6204",
+      "error": true
+    },
+    {
+      "name": "same-path-twice",
+      "desc": "The same path twice in one diff refuses",
+      "files": {
+        "a.txt": "foo bar\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741d666f6f1a464f4f1c612e7478741d6261721a42415204",
+      "error": true
+    },
+    {
+      "name": "bytes-after-eot",
+      "desc": "Bytes after EOT refuse",
+      "files": {
+        "a.txt": "foo bar\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741d666f6f1a464f4f041d6261721a424152",
+      "error": true
+    },
+    {
+      "name": "text-path",
+      "desc": "A path is a name, never text",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c02612e747874031d666f6f1a62617204",
+      "error": true
+    },
+    {
+      "name": "dead-heading-key",
+      "desc": "A dead heading key is ignored; the FS after it is live",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966660701781f791c612e7478741d666f6f1a62617204",
+      "result": {
+        "a.txt": "bar\n"
+      }
+    },
+    {
       "name": "missing-file",
       "desc": "A path that does not exist refuses",
       "files": {

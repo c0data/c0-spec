@@ -109,8 +109,8 @@ GS of a file belong to an unnamed group.
 A document begins with **SYN (0x16)**. The text after SYN is the document's
 **heading**: keyed units, each SOH, key, US, value (see Records), holding
 what a reader must know before reading. The heading ends at the first code
-that is neither part of a keyed unit nor a comment: FS, GS, RS, a header
-row, EOT, ETB, EM, or SYN. A SYN followed directly by one of those is the
+that is neither part of a keyed unit nor a note nor a dead keyed unit: FS,
+GS, RS, a header row (live or dead), EOT, ETB, EM, or SYN. A SYN followed directly by one of those is the
 empty heading. A plain byte directly after SYN is an error.
 
     ␖␜mydb␝users␁␞name␟amount␞Alice␟100␞Bob␟200␄        empty heading
@@ -142,7 +142,8 @@ SYN. File-type and MIME detectors must therefore match two bytes.
 ### End: EOT
 
 **EOT (0x04)** ends a document. After EOT only layout, another document's
-SYN, or EM may follow; anything else is an error. In a file or message
+SYN, or EM may follow; anything else is an error, a second document
+without SYN included. In a file or message
 holding several documents, each begins with its own SYN. A reader can find
 document starts from any offset before EM, since an unescaped SYN is always
 a start (see Text).
@@ -153,6 +154,10 @@ a start (see Text).
 |--------|----------|-----------|
 | SYN | at the start of every file and message, logs included | none |
 | EOT | at the end of every document in a file or message | logs, which need no end |
+
+"Required" binds writers: a conforming writer always emits them. A reader
+accepts their absence with the loud warning below, which is how a slice is
+read on its own.
 
 A **log** is a document whose heading declares `shape` `stream`. It starts
 with SYN and its heading, committed with the first ETB; ETB answers
@@ -287,8 +292,9 @@ a CSV header row.
     ␞Alice␟1502.30␟DEPOSIT
     ␞Bob␟340.00␟WITHDRAWAL
 
-A header row is the first item of a group, of a nested level, or of a log's
-body, after any comments; a header row anywhere else is an error. It names
+A header row is the first live item of its group, which may be the unnamed
+group at the start of a file or of a nested level, after any notes, dead
+elements or commits; a header row anywhere else is an error. It names
 the fields of the positional records under it; a keyed record under a
 header row is legal and names its own. The format does not check that a
 record has as many fields as the header names; that is the schema layer's
@@ -400,8 +406,8 @@ apply inside; nothing new is needed:
 | a map | `␐␞␁street␟1 Main␁city␟Springfield␘` |
 | a whole document | `␐␜name␝g␞a␘` |
 
-DLE must be followed by a structural code (FS, GS, RS, SOH, BEL) or by CAN;
-`␐x` and `␐␟` are errors. An SOH there is a header row; a keyed unit
+DLE must be followed by FS, GS, RS, SOH, BEL (a comment) or CAN; `␐x`,
+`␐␟` and `␐␗` are errors. An SOH there is a header row; a keyed unit
 outside a record (`␐␁k␟v␘`) is an error. Commits (ETB) do not occur inside
 a level. The RS of a list is written, never assumed. A value inside a level
 that needs exactness is itself text. An unmatched CAN, or a level open at
@@ -413,10 +419,9 @@ CAN has no effect when printed raw on a terminal, and DLE none.
 ## References (ENQ)
 
 **ENQ (0x05)** marks a field value as a reference to data defined elsewhere.
-Referenced material must be defined **before** any reference to it, so a
-single pass with no backtracking resolves every reference; a group is
-defined once its label has been read, so a record may refer to the group it
-sits in.
+Referenced material is defined **before** any reference to it, so a single
+pass with no backtracking resolves every reference; a group is defined once
+its label has been read, so a record may refer to the group it sits in.
 
 A plain name is a group:
 
@@ -427,13 +432,17 @@ because a US would otherwise end the field; ENQ reads its text as a path:
 
     ␅␂tags␟001␟label␃
 
-group → record id → field name, where the record id is the record's first
-field and the field name is a header name. Text with one segment is a group
-reference, legal and not canonical; four or more segments, an empty segment,
-or an empty name is an error. Segments are split on US, so a record whose
-first field is text containing a US cannot be addressed by path: an id used
-as an address is a name in practice, and such a record is still reachable
-by a group reference and a lookup in the application. A reference is hashed as the bytes it is
+group → record id → field name, where the record id is the positional
+record's first field and the field name is a header name. Every segment is
+a name: no edge whitespace, no control bytes, non-empty. Text with one
+segment is a group reference, legal and not canonical; four or more
+segments, an empty segment, a segment that is not a name, or an empty
+reference is an error. A record whose first field is not a name cannot be
+addressed by path, and a keyed record cannot be: such records are reached
+by a group reference and a lookup in the application. The format checks a
+reference's form only; resolution is the library's, against the document's
+top-level body (a level's contents are not a namespace), and a reference
+whose target does not exist, or is defined later, is an error at resolution. A reference is hashed as the bytes it is
 written in: the pointer, not the thing pointed at; the format does not
 resolve it, and a reference whose target does not exist is an error when
 the library is asked to resolve it.
@@ -470,10 +479,19 @@ heading key or a file line may be dead.
     ␇␂anything ␞ at all␃         a note holding control codes is text
 
 Layout between the BEL and the code is layout, as everywhere: `␇␊␞port` is
-a dead record. A note in field position is a unit: `␞Alice␟␇old␟100` is
-`Alice`, an empty field, `100`. BEL before US, ETX, CAN, ETB, EOT, SYN or
-EM is an error: those are not elements, and framing cannot be commented
-out. Comments are allowed inside nested levels and inside committed log
+a dead record. A note has content: a BEL directly followed by a code is
+always the dead marker, so `␇␇␞x` is an error (BEL is not an element), and
+a BEL at the end of input is an error. The codes that may follow a BEL are
+FS, GS, RS, SOH, DLE and plain or text content; before any other code (US,
+ETX, CAN, ENQ, ETB, EOT, SYN, EM) a BEL is an error: those are not elements,
+and framing cannot be commented out.
+
+**A note is never a unit.** Wherever a note sits, the reader skips it and
+the structure around it is what the codes say: `␞Alice␟␇old␟100` has two
+US and so three units, `Alice`, an empty unit holding only a note, and
+`100`; `␞a␇n␟b` has one US and two units, `a` and `b`; `␞␁a␟1␇n␁b␟2` is
+the map `a`=`1`, `b`=`2`. Stripping comments therefore never changes arity.
+A keyed record whose every unit is dead is an empty map. Comments are allowed inside nested levels and inside committed log
 blocks: the ETB digest covers them, the content hash does not. Stripping
 comments is a tool option, not a reader rule; canonicalisation strips
 notes and dead elements alike.
@@ -532,7 +550,7 @@ is a table of pairs; converters treat it as such and do not guess.
 | Tabular    | row               | field / column            |
 | Document   | paragraph / block | list item / element       |
 | Key-Value  | the section's map | key → value (after SOH)   |
-| Diff       | —                 | anchor ↔ replacement unit |
+| Diff       | replace-all       | anchor ↔ replacement unit |
 
 
 ## Canonical Form (Content Addressing)
@@ -596,8 +614,9 @@ stream.
 ### Canonical Units
 
 - **Record** — the content bytes after its RS, up to the next RS, GS, FS,
-  BEL or framing byte at the record's own depth; text and nested levels
-  included, the RS itself excluded.
+  dead record-level element or framing byte at the record's own depth;
+  text, nested levels and notes inside it included, the RS itself
+  excluded.
 - **Group** — from its GS through its records and deeper sections (name,
   header row and GS-repeated subsections included), up to the next GS at
   depth one, FS, or framing byte.
@@ -644,8 +663,8 @@ single trailing ETB makes the batch atomic.
 - **Readers** MUST treat a trailing block with no terminating ETB as torn
   and skip it, whatever it holds: a tail that leaves text or a level open,
   ends in a lone DLE, or is malformed, is torn and is not reported as an
-  error. A tail holding only layout, notes or EOT is not torn: those are
-  not data. Malformed structure *inside* a committed block is an error, as
+  error. A tail holding only layout, notes, EOT or EM is not torn: those
+  are not data. A dead element in the tail is data, and the tail is torn. Malformed structure *inside* a committed block is an error, as
   anywhere.
 - **Writers** MUST verify the stream ends at a commit (an ETB and its
   payload) before appending, by truncating an uncommitted tail or by
@@ -656,9 +675,12 @@ single trailing ETB makes the batch atomic.
 - A block and its ETB SHOULD be issued as a single append.
 
 Because framing cuts through text and levels, an unescaped ETB is always a
-commit: a torn text cannot hide later commits, damage is confined to one
-block, and the last commit can be found by scanning backward from the end,
-counting the DLEs before each ETB. A block cut by an ETB inside open text or
+commit: a torn text cannot hide later commits, and damage is confined to
+one block. Outside text a DLE is a level opener, so `␐␗` there is a commit
+that cuts an open level (a damaged block), not an escape. The forward scan
+is authoritative; a backward scan from the end of a container with no EM,
+treating an ETB behind an odd run of DLEs as escaped, finds the last
+commit in well-formed input and is a shortcut, not a definition. A block cut by an ETB inside open text or
 an open level is **damaged**: the reader delivers nothing from it, reports
 it, discards the open text or level state, and resumes with the byte after
 the ETB and its payload. The commit rule applies to every appended unit, the
@@ -750,8 +772,8 @@ In a diff body FS begins a file, GS a section (one anchored pattern whose
 US-separated units are anchors or `old␚new` substitutions), RS a
 replace-all within the section's scope, and **SUB (0x1A)** separates old
 from new. Anchors, olds and news are values under the ordinary rules,
-plain or text. SOH, DLE and ENQ are errors in a diff body; SUB is an error
-outside one. Comments and framing apply as everywhere. The grammar is
+plain or text; paths are names. SOH, DLE and ENQ are errors in a diff body;
+SUB is an error outside one. Comments and framing apply as everywhere. The grammar is
 `diff-body` in `GRAMMAR.md`; the matching, scope and atomicity rules are
 in `DIFF.md`; the vectors are `vectors/diff.json`.
 
@@ -782,7 +804,7 @@ C0DATA is a system, not a single format. The same vocabulary expresses:
 | Nested     | DLE … CAN, any inner codes      | JSON objects, arrays  |
 | Text       | STX/ETX                         | quoted strings, blobs in transit |
 | Reference  | ENQ, text for paths             | foreign keys, links   |
-| Diff       | FS, GS, US, SUB                 | unified diff, patches |
+| Diff       | FS, GS, RS, US, SUB             | unified diff, patches |
 | Stream     | RS, US, ETB                     | NDJSON, SSE, WAL      |
 | Container  | SYN heading, EM                 | tar, zip, PDF streams |
 

@@ -30,7 +30,9 @@ In `greeting.txt`, find `Hello world!`, once, and replace `world` with
     ␄
 
 - **FS** begins a file: the text after it is the path, relative to the
-  directory the diff is applied in. A path may not escape that directory.
+  directory the diff is applied in. A path is a name: no edge whitespace or
+  control bytes, so files with such names are outside the format. A path
+  may not escape that directory.
 - **GS** begins a **section**, one anchored pattern. Sections within a
   file are sequential.
 - **US** separates the **units** of a pattern.
@@ -41,10 +43,16 @@ In `greeting.txt`, find `Hello world!`, once, and replace `world` with
 - **SYN**, the heading and **EOT** are as in every C0DATA document. The
   heading SHOULD carry `shape␟diff`; a diff tool accepts an unspecified
   shape and refuses a contradicting one. A generic C0DATA reader given a
-  diff with no shape rejects it at the first byte that fits no data
-  production.
-- **BEL** is as everywhere: a note ends at the next code, and a BEL before
-  GS kills that section, before RS that replace-all, before FS that file.
+  diff with no shape may misread it as data (a diff of anchors alone is
+  also a valid data body) or reject it at the first SUB.
+- **BEL** is as everywhere: a note ends at the next code and is never a
+  unit, and a BEL before GS, RS or FS kills that line only. A dead GS kills
+  its pattern; RS lines after it attach to the previous live section (or
+  the file's leading scope). A dead FS kills its path line; lines after it
+  belong to the previous file.
+- **ETB** and its payload are tolerated between lines as everywhere; EOT
+  ends the diff, and bytes after it other than layout, SYN or EM are an
+  error.
 - **SOH**, **DLE** and **ENQ** have no meaning in a diff body and are
   errors there. SUB has no meaning outside a diff and is an error
   elsewhere.
@@ -72,6 +80,8 @@ Rules:
 - The search text must match **exactly once** in the part of the file
   after the previous section's match (from the start of the file for the
   first section). Zero matches is an error; two or more is an error.
+  Matches are counted at every position, overlapping ones included: `aa`
+  occurs twice in `aaa`.
 - Sections are applied in order; the **cursor** moves to the end of each
   match.
 - An empty old part is an **insertion**: the new part is inserted where
@@ -79,7 +89,9 @@ Rules:
 - An empty new part is a **deletion**.
 - A section with no substitution is an **assertion**: the anchor must be
   present once; nothing changes, and the cursor moves past it.
-- An empty search text is an error.
+- An empty search text is an error. An empty unit contributes nothing.
+- A file with no sections asserts only that the file exists; a diff with no
+  files is a no-op. The same path twice in one diff is an error.
 
 Patterns anchor on one side, both sides, or carry several substitutions:
 
@@ -114,8 +126,8 @@ Every `count` between `def tally(items)` and the following `end` becomes
 - Zero occurrences is an error, like an anchor that does not match.
 - Several RS lines after one section apply in order, each to the scope as
   left by the one before.
-- An RS line before any GS in a file applies to the whole file (its scope
-  is the file, up to the first section's match).
+- An RS line before any GS in a file has as its scope the start of the file
+  up to the first section's match (the whole file when there is none).
 - A replace-all does not move the cursor; the next section is searched
   from the end of its own section's match, in the text as it was before
   the replace-all. Section matching is decided on the original file.
@@ -146,6 +158,7 @@ A diff tool refuses, without writing, on:
 - a replace-all with zero occurrences, or an empty old part;
 - an empty search text;
 - a heading whose `shape` is present and is not `diff`;
+- the same path twice;
 - any byte sequence outside the `diff-body` grammar.
 
 Files are compared and matched as bytes. A tool MAY offer options above

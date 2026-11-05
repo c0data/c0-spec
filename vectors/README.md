@@ -86,7 +86,7 @@ Logical structure → expected canonical bytes. Case shape:
 
 A conforming encoder MUST produce exactly `canonical`: a value is plain
 when it has no byte below 0x20 and no edge whitespace, otherwise text
-with only STX, ETX, DLE, ETB, EOT and SYN escaped; keyed records sorted
+with only STX, ETX, DLE, ETB, EOT, SYN and EM escaped; keyed records sorted
 bytewise by key; order otherwise preserved; no layout, no framing. A
 `build` with a `heading` also specifies `bytes`, the file as written:
 SYN, the heading with sorted keys, the body, EOT.
@@ -149,8 +149,9 @@ Stream-mode (ETB commit) semantics. Case shape:
 ```
 
 `committed_end` — offset just past the last ETB and its payload. `torn`
-— uncommitted bytes trail the last commit, including a tail that leaves
-text or a level open or ends in a lone DLE. `blocks` — each committed
+— data trails the last commit (a tail of layout, notes, EOT or EM alone is
+not torn), including a tail that leaves text or a level open or ends in a
+lone DLE. `blocks` — each committed
 block's bytes (previous commit to ETB, marker and payload excluded).
 An unescaped ETB is always a commit, inside text or a level too; a block
 so cut is listed in `damaged`. `records` (optional) — logical records of
@@ -184,8 +185,8 @@ Nested levels (DLE … CAN) in a single record, and the list convenience. Case s
 ```
 
 `bytes` is a bare record stream holding one record. `record` is its
-expected logical fields: `{"list": [...]}` is a level holding exactly
-one positional record, read with the list accessor (`Record#list` or its
+expected logical fields: `{"list": [...]}` is a level holding at most
+one positional record (an empty level is the empty list), read with the list accessor (`Record#list` or its
 equivalent) and written with the builder's list-field writer;
 `{"level": ...}` is any other level, read with the general accessor
 (the list accessor rejects it). `canonical` — when true, building the

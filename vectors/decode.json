@@ -1446,6 +1446,65 @@
       ]
     },
     {
+      "name": "comment-note-after-value",
+      "desc": "A note after a value is skipped and is not a unit",
+      "bytes": "1e61076e1f62",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              "b"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-all-keyed-units-dead",
+      "desc": "A keyed record whose units are all dead is an empty map",
+      "bytes": "1e07016b1f761e78",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            {
+              "keys": []
+            },
+            [
+              "x"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-dead-header-then-live",
+      "desc": "A dead header row does not take the header slot",
+      "bytes": "1d6707011e781f79011e701f711e311f32",
+      "file": null,
+      "groups": [
+        {
+          "name": "g",
+          "headers": [
+            "p",
+            "q"
+          ],
+          "records": [
+            [
+              "1",
+              "2"
+            ]
+          ]
+        }
+      ]
+    },
+    {
       "name": "comment-with-text",
       "desc": "A note that holds control codes is text",
       "bytes": "1d6707021e6e6f742061207265636f7264031e61",

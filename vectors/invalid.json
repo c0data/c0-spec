@@ -127,6 +127,26 @@
       "bytes": "1e101e610718"
     },
     {
+      "name": "bel-before-enq",
+      "desc": "A reference is not an element",
+      "bytes": "1e611f070574616773"
+    },
+    {
+      "name": "bel-before-bel",
+      "desc": "BEL is not an element",
+      "bytes": "07071e78"
+    },
+    {
+      "name": "bel-at-end",
+      "desc": "A note needs content",
+      "bytes": "1e6107"
+    },
+    {
+      "name": "second-document-without-syn",
+      "desc": "After EOT only SYN, EM or layout may follow",
+      "bytes": "161e61041e62"
+    },
+    {
       "name": "text-after-can",
       "desc": "Text after CAN belongs to nothing",
       "bytes": "1e101878"

@@ -222,6 +222,12 @@ dec("comment-note-between-keyed-units", "A note ends at the next code; the next 
     "␞␁a␟1␇n␁b␟2␞x", [g("", [keyed(("a", "1"), ("b", "2")), ["x"]])])
 dec("comment-ends-at-header-row", "A note ends at a header row",
     "␝g␇note␁␞x␟y␞1␟2", [g("g", [["1", "2"]], ["x", "y"])])
+dec("comment-note-after-value", "A note after a value is skipped and is not a unit",
+    "␞a␇n␟b", [g("", [["a", "b"]])])
+dec("comment-all-keyed-units-dead", "A keyed record whose units are all dead is an empty map",
+    "␞␇␁k␟v␞x", [g("", [keyed(), ["x"]])])
+dec("comment-dead-header-then-live", "A dead header row does not take the header slot",
+    "␝g␇␁␞x␟y␁␞p␟q␞1␟2", [g("g", [["1", "2"]], ["p", "q"])])
 dec("comment-with-text", "A note that holds control codes is text",
     "␝g␇␂␞not a record␃␞a", [g("g", [["a"]])])
 dec("two-documents", "Two documents in one container, each with its own SYN",
@@ -376,6 +382,10 @@ inv("em-inside-text", "EM cuts through text; raw EM inside text is an error for 
 inv("bel-before-us", "BEL before US: US is not an element", "␞a␇␟b")
 inv("bel-before-etb", "Framing cannot be commented out", "␞a␇␗")
 inv("bel-before-can", "BEL before CAN", "␞␐␞a␇␘")
+inv("bel-before-enq", "A reference is not an element", "␞a␟␇␅tags")
+inv("bel-before-bel", "BEL is not an element", "␇␇␞x")
+inv("bel-at-end", "A note needs content", "␞a␇")
+inv("second-document-without-syn", "After EOT only SYN, EM or layout may follow", "␖␞a␄␞b")
 inv("text-after-can", "Text after CAN belongs to nothing", "␞␐␘x")
 inv("mixed-record", "Positional then keyed units in one record", "␞a␁k␟v")
 inv("key-without-value", "SOH, key, then a record-level code with no US", "␞␁k␞x")
@@ -527,6 +537,14 @@ def _value(bs, i):
     return bytes(val), i
 
 
+def _name(bs, i):
+    while i < len(bs) and bs[i] in LAYOUT:
+        i += 1
+    if i < len(bs) and bs[i] == 0x02:
+        raise DiffError("a name cannot be text")
+    return _value(bs, i)
+
+
 def _parse_diff(bs):
     """→ list of (path, [ops]); op = ("section", [units]) | ("replace", old, new);
     unit = (anchor_bytes, None) | (old, new)."""
@@ -537,14 +555,25 @@ def _parse_diff(bs):
             while i < len(bs) and bs[i] in LAYOUT:
                 i += 1
             if i < len(bs) and bs[i] == 0x01:
-                k, i = _value(bs, i + 1)
+                k, i = _name(bs, i + 1)
                 if i >= len(bs) or bs[i] != 0x1F:
                     raise DiffError("key without value")
                 v, i = _value(bs, i + 1)
                 if k == b"shape" and v != b"diff":
                     raise DiffError("shape is not diff")
             elif i < len(bs) and bs[i] == 0x07:
-                _, i = _value(bs, i + 1)
+                j = i + 1
+                while j < len(bs) and bs[j] in LAYOUT:
+                    j += 1
+                if j < len(bs) and bs[j] == 0x01:      # dead heading key
+                    _, j = _value(bs, j + 1)
+                    if j >= len(bs) or bs[j] != 0x1F:
+                        raise DiffError("key without value")
+                    _, i = _value(bs, j + 1)
+                elif j < len(bs) and bs[j] < 0x20 and bs[j] != 0x02:
+                    break                              # dead body element: body's business
+                else:
+                    _, i = _value(bs, j)
             else:
                 break
     cur = None
@@ -556,16 +585,32 @@ def _parse_diff(bs):
             j = i + 1
             while j < len(bs) and bs[j] in LAYOUT:
                 j += 1
-            if j < len(bs) and bs[j] < 0x20:
-                dead_code = bs[j]
-                # parse the dead element by recursion on a copy and drop it
-                sub, k = _parse_one(bs, j)
+            if j >= len(bs):
+                raise DiffError("BEL at end of input")
+            if bs[j] < 0x20 and bs[j] != 0x02:
+                if bs[j] not in (0x1C, 0x1D, 0x1E):
+                    raise DiffError("BEL before a non-element")
+                sub, k = _parse_one(bs, j)       # parsed and dropped
                 i = k; continue
-            _, i = _value(bs, i + 1); continue
+            _, i = _value(bs, j); continue
         if x == 0x04:
-            i += 1; continue
+            i += 1
+            while i < len(bs) and bs[i] in LAYOUT:
+                i += 1
+            if i < len(bs) and bs[i] not in (0x16, 0x19):
+                raise DiffError("bytes after EOT")
+            break
+        if x == 0x17:                             # commit: tolerated
+            i += 1
+            while i < len(bs) and bs[i] in LAYOUT:
+                i += 1
+            while i < len(bs) and bs[i] >= 0x20:
+                i += 1
+            continue
         if x == 0x1C:
-            path, i = _value(bs, i + 1)
+            path, i = _name(bs, i + 1)
+            if any(f[0] == path.decode() for f in files):
+                raise DiffError("same path twice")
             cur = (path.decode(), []); files.append(cur); continue
         if x in (0x1D, 0x1E):
             if cur is None:
@@ -574,6 +619,20 @@ def _parse_diff(bs):
             cur[1].append(op); continue
         raise DiffError("unexpected byte %#x" % x)
     return files
+
+
+def _skip_notes(bs, i):
+    while True:
+        j = i
+        while j < len(bs) and bs[j] in LAYOUT:
+            j += 1
+        if j < len(bs) and bs[j] == 0x07:
+            k = j + 1
+            while k < len(bs) and bs[k] in LAYOUT:
+                k += 1
+            if k < len(bs) and (bs[k] >= 0x20 or bs[k] == 0x02):
+                _, i = _value(bs, k); continue
+        return i
 
 
 def _parse_one(bs, i):
@@ -587,6 +646,7 @@ def _parse_one(bs, i):
                 units.append((a, b))
             else:
                 units.append((a, None))
+            i = _skip_notes(bs, i)
             if i < len(bs) and bs[i] == 0x1F:
                 i += 1; continue
             break
@@ -600,7 +660,7 @@ def _parse_one(bs, i):
             raise DiffError("replace-all with empty old")
         return ("replace", old, new), i
     if x == 0x1C:
-        path, i = _value(bs, i + 1)
+        path, i = _name(bs, i + 1)
         return ("file", path), i
     raise DiffError("unexpected byte %#x" % x)
 
@@ -743,6 +803,26 @@ df("replace-all-empty-old", "A replace-all needs a non-empty old part",
    {"a.txt": "--\n"}, D + "␜a.txt␝--␞␚x␄", error=True)
 df("wrong-shape", "A heading that contradicts the diff tool refuses",
    {"a.txt": "foo\n"}, "␖␁shape␟stream␜a.txt␝foo␚bar␄", error=True)
+df("dead-file-line", "A dead FS kills only the path line; what follows attaches to the previous file",
+   {"a.txt": "foo baz\n"}, D + "␜a.txt␝foo␚FOO␇␜b.txt␝baz␚BAZ␄", {"a.txt": "FOO BAZ\n"})
+df("dead-section-replace-attaches", "RS lines after a dead GS attach to the previous live section",
+   {"a.txt": "A x\nC x\n"}, D + "␜a.txt␝A␇␝C␞x␚y␄", {"a.txt": "A y\nC y\n"})
+df("text-note-in-body", "A text note between lines is skipped",
+   {"a.txt": "foo\n"}, D + "␜a.txt␇␂note ␞ with codes␃␝foo␚bar␄", {"a.txt": "bar\n"})
+df("note-in-pattern", "A note after a unit is not a unit",
+   {"a.txt": "ab\n"}, D + "␜a.txt␝a␇n␟b␚c␄", {"a.txt": "ac\n"})
+df("commit-tolerated", "An ETB between lines is a no-op",
+   {"a.txt": "foo\n"}, D + "␜a.txt␝foo␚bar␗␄", {"a.txt": "bar\n"})
+df("overlapping-ambiguous", "Matches are counted at every position: aa occurs twice in aaa",
+   {"a.txt": "aaa\n"}, D + "␜a.txt␝aa␚b␄", error=True)
+df("same-path-twice", "The same path twice in one diff refuses",
+   {"a.txt": "foo bar\n"}, D + "␜a.txt␝foo␚FOO␜a.txt␝bar␚BAR␄", error=True)
+df("bytes-after-eot", "Bytes after EOT refuse",
+   {"a.txt": "foo bar\n"}, D + "␜a.txt␝foo␚FOO␄␝bar␚BAR", error=True)
+df("text-path", "A path is a name, never text",
+   {"a.txt": "foo\n"}, D + "␜␂a.txt␃␝foo␚bar␄", error=True)
+df("dead-heading-key", "A dead heading key is ignored; the FS after it is live",
+   {"a.txt": "foo\n"}, "␖␁shape␟diff␇␁x␟y␜a.txt␝foo␚bar␄", {"a.txt": "bar\n"})
 df("missing-file", "A path that does not exist refuses",
    {"a.txt": "foo\n"}, D + "␜b.txt␝foo␚bar␄", error=True)
 

@@ -38,12 +38,14 @@ the codes around it.
 
 ## Start symbol
 
-    input     = L *document [ EM *OCTET ]
-    document  = [ SYN L heading ] ( body / diff-body ) [ EOT L ]
+    input     = L [ first ] *document [ EM *OCTET ]
+    first     = [ SYN L heading ] ( body / diff-body ) [ EOT L ]
+    document  = SYN L heading ( body / diff-body ) [ EOT L ]
 
-A file or message is a sequence of documents, each with SYN; a document
-without SYN is well-formed and draws DESIGN.md's loud warning, which is
-how a slice (a group, a record, a log body) is read on its own.
+A file or message is a sequence of documents, each with SYN; only the
+first may lack it, which is well-formed and draws DESIGN.md's loud
+warning, and is how a slice (a group, a record, a log body) is read on
+its own. After an EOT only SYN, EM or the end of input may follow.
 Everything after EM, to the end of the input, is the raw region declared
 in the first document's heading. Which of `body` and `diff-body` applies
 is decided by the heading's `shape`, or by the reader's caller when
@@ -51,48 +53,56 @@ is decided by the heading's `shape`, or by the reader's caller when
 
 ## Heading and body
 
-    heading   = *( keyed-unit / note )
+    heading   = *( hunit / note )
+    hunit     = [ BEL L ] SOH L name L US L [ hvalue ]
 
     body      = part *( file-line part )
     file-line = [ BEL L ] FS L name L
-    part      = *note [ header-row ] *item *group
-    group     = group-line *note [ header-row ] *item
+    part      = *pre [ header-row ] *item *group
+    group     = group-line *pre [ header-row ] *item
     group-line = [ BEL L ] 1*( GS L ) name L
+    pre       = note / commit / dead-record / dead-header
     item      = record / note / commit
+    dead-record = BEL L RS L ( keyed / positional )
+    dead-header = BEL L SOH L RS L name L *( US L name L )
 
 The heading ends where the body begins: at the first code that is neither
 part of a keyed unit nor a note. A log is a document whose heading
 declares `shape` `stream`; its items include commits. Records and groups
 before the first FS belong to an unnamed file; records before the first
-GS of a part belong to an unnamed group. A header row is the first item
-of a part, a group or a level, after any notes. `GS L GS` is depth two;
+GS of a part belong to an unnamed group. A header row is the first live
+item of a part, a group or a level, after any notes, commits or dead
+elements. `GS L GS` is depth two;
 an empty-named group therefore cannot directly precede another group.
 Commits occur only at depth zero: `lbody` below is `body` without them.
 
     lbody     = lpart *( file-line lpart )
-    lpart     = *note [ header-row ] *litem *lgroup
-    lgroup    = group-line *note [ header-row ] *litem
+    lpart     = *lpre [ header-row ] *litem *lgroup
+    lgroup    = group-line *lpre [ header-row ] *litem
+    lpre      = note / dead-record / dead-header
     litem     = record / note
 
 ## Records
 
-    record      = [ BEL L ] RS L ( keyed / positional )
-    positional  = [ value ] *( US L [ value ] )
-    keyed       = 1*keyed-unit
-    keyed-unit  = [ BEL L ] SOH L name L US L [ value ]
+    record      = RS L ( keyed / positional )
+    positional  = unit *( US L unit )
+    unit        = [ ( plain / text / level / reference ) L ] *note
+    keyed       = 1*( keyed-unit / note )
+    keyed-unit  = [ BEL L ] SOH L name L US L unit
 
-    header-row  = [ BEL L ] SOH L RS L name L *( US L name L )
+    header-row  = SOH L RS L name L *( US L name L )
 
 A record is keyed or positional, never both. `RS` alone is a positional
-record of one empty field. `SOH` followed (after layout) by `RS` is a
+record of one empty unit. A unit holds at most one value, followed by any
+number of notes; a note is never a unit, so `␞a␇n␟b` is two units and
+`␞Alice␟␇old␟100` three. `SOH` followed (after layout) by `RS` is a
 header row; `SOH` followed by anything else begins a keyed unit, which
-occurs only in a record or the heading. The heading's keyed units take
-`hvalue` in place of `value` (no reference).
+occurs only in a record or the heading. The heading's units take `hvalue`
+(no reference). A keyed record whose units are all dead is an empty map.
 
 ## Values
 
-    value     = ( plain / text / level / reference ) L
-    hvalue    = ( plain / text / level ) L
+    hvalue    = [ ( plain / text / level ) L ] *note
 
     text      = STX *tbyte ETX
     tbyte     = %x00-01 / %x05-0F / %x11-15 / %x18 / %x1A-FF
@@ -101,6 +111,8 @@ occurs only in a record or the heading. The heading's keyed units take
     level     = [ BEL L ] DLE L lbody CAN
 
     reference = ENQ L ( plain / STX 1*tbyte ETX )
+
+A dead level (`BEL L DLE …`) in unit position leaves the unit empty.
 
 Inside text every byte is data except STX, ETX, DLE, ETB, EOT, SYN and
 EM, each of which is data only after a DLE. Text does not nest. A level
@@ -114,32 +126,37 @@ group reference.
 
 ## Comments and commits
 
-    note      = BEL L [ plain / text ] L
+    note      = BEL L ( plain / text ) L
 
     commit    = ETB L [ plain ] L
 
-BEL owns the text after it like any other code: a `note` is skipped by
-the reader. A `[ BEL L ]` in front of a record, header row, keyed unit,
-group line, file line or level marks that element **dead**: it is parsed
-as written and then discarded. BEL before any other code (US, ETX, CAN,
-ETB, EOT, SYN, EM) matches no production. A commit's plain text is its
+BEL owns the text after it like any other code: a `note` has content and
+is skipped by the reader. A `BEL L` in front of a record, header row,
+keyed unit, group line, file line or level marks that element **dead**:
+it is parsed as written and then discarded. Because a note's content is
+required, `BEL` directly before a code is always the dead marker, and BEL
+before any other code (US, ETX, CAN, ENQ, BEL, ETB, EOT, SYN, EM) or at the
+end of input matches no production. A commit's plain text is its
 payload; the commit ends the record before it.
 
 ## C0-DIFF
 
-    diff-body = *( file-line *note *replace *section )
-    section   = [ BEL L ] GS L pattern L *note *replace
-    replace   = [ BEL L ] RS L dvalue SUB L [ dvalue ] *note
-    pattern   = unit *( US L unit )
-    unit      = [ dvalue ] [ SUB L [ dvalue ] ]
+    diff-body = *( file-line *dpre *replace *( section *replace ) )
+    section   = [ BEL L ] GS L pattern L *dpre
+    replace   = [ BEL L ] RS L dvalue SUB L [ dvalue ] *dpre
+    dpre      = note / commit
+    pattern   = dunit *( US L dunit )
+    dunit     = [ dvalue ] [ SUB L [ dvalue ] ] *note
     dvalue    = ( plain / text ) L
 
 A diff's heading should carry `shape` `diff`. A unit without SUB is an
 anchor; with SUB it is a substitution, old then new. A `replace` is a
-replace-all within the scope of the section before it (or the whole file
-when it precedes every section); its old part is non-empty. SOH, DLE and
+replace-all within the scope of the live section before it (or, before
+every section, from the start of the file to the first section's match);
+its old part is non-empty. SOH, DLE and
 ENQ do not occur in a diff body; SUB does not occur outside one. A dead GS
-kills its section, a dead RS its replace-all, a dead FS its file. The
+kills its pattern line, a dead RS its replace-all, a dead FS its path
+line; what follows attaches to the previous live element. The
 semantics are in `DIFF.md`.
 
 ## Canonical constraints
@@ -174,4 +191,5 @@ the hash.
   CANs to find the level's end.
 - Mid-buffer resynchronisation (first unescaped bracket decides inside or
   outside text; an unescaped SYN is a document start) holds everywhere
-  before EM, and EM is itself found by the same scan.
+  before EM. A backward scan presumes the container has no raw region;
+  with EM present the first heading says where the region starts.
