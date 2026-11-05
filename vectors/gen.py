@@ -224,6 +224,9 @@ dec("comment-ends-at-header-row", "A note ends at a header row",
     "␝g␇note␁␞x␟y␞1␟2", [g("g", [["1", "2"]], ["x", "y"])])
 dec("comment-note-after-value", "A note after a value is skipped and is not a unit",
     "␞a␇n␟b", [g("", [["a", "b"]])])
+dec("comment-notes-after-text", "Notes may follow a text value, in a positional or a keyed unit; several notes are still one unit",
+    "␞␂a b␃␇n1␇n2␟c␞␁k␟␂v␃␇n",
+    [g("", [["a b", "c"], keyed(("k", "v"))])])
 dec("comment-all-keyed-units-dead", "A keyed record whose units are all dead is an empty map",
     "␞␇␁k␟v␞x", [g("", [keyed(), ["x"]])])
 dec("comment-dead-header-then-live", "A dead header row does not take the header slot",

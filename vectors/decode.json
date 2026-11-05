@@ -1464,6 +1464,32 @@
       ]
     },
     {
+      "name": "comment-notes-after-text",
+      "desc": "Notes may follow a text value, in a positional or a keyed unit; several notes are still one unit",
+      "bytes": "1e0261206203076e31076e321f631e016b1f027603076e",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a b",
+              "c"
+            ],
+            {
+              "keys": [
+                [
+                  "k",
+                  "v"
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "comment-all-keyed-units-dead",
       "desc": "A keyed record whose units are all dead is an empty map",
       "bytes": "1e07016b1f761e78",
