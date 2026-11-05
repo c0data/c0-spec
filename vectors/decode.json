@@ -1446,6 +1446,63 @@
       ]
     },
     {
+      "name": "comment-dead-file-line",
+      "desc": "A dead file line is read as if absent: what follows stays in the file before it, leading records in that file's last group",
+      "bytes": "1c611d781e31071c621e321d791e33",
+      "file": "a",
+      "groups": [
+        {
+          "name": "x",
+          "headers": null,
+          "records": [
+            [
+              "1"
+            ],
+            [
+              "2"
+            ]
+          ]
+        },
+        {
+          "name": "y",
+          "headers": null,
+          "records": [
+            [
+              "3"
+            ]
+          ]
+        }
+      ],
+      "files": [
+        {
+          "name": "a",
+          "groups": [
+            {
+              "name": "x",
+              "headers": null,
+              "records": [
+                [
+                  "1"
+                ],
+                [
+                  "2"
+                ]
+              ]
+            },
+            {
+              "name": "y",
+              "headers": null,
+              "records": [
+                [
+                  "3"
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "comment-note-after-value",
       "desc": "A note after a value is skipped and is not a unit",
       "bytes": "1e61076e1f62",

@@ -222,6 +222,10 @@ dec("comment-note-between-keyed-units", "A note ends at the next code; the next 
     "␞␁a␟1␇n␁b␟2␞x", [g("", [keyed(("a", "1"), ("b", "2")), ["x"]])])
 dec("comment-ends-at-header-row", "A note ends at a header row",
     "␝g␇note␁␞x␟y␞1␟2", [g("g", [["1", "2"]], ["x", "y"])])
+dec("comment-dead-file-line", "A dead file line is read as if absent: what follows stays in the file before it, leading records in that file's last group",
+    "␜a␝x␞1␇␜b␞2␝y␞3",
+    [g("x", [["1"], ["2"]]), g("y", [["3"]])], file="a",
+    files=[{"name": "a", "groups": [g("x", [["1"], ["2"]]), g("y", [["3"]])]}])
 dec("comment-note-after-value", "A note after a value is skipped and is not a unit",
     "␞a␇n␟b", [g("", [["a", "b"]])])
 dec("comment-notes-after-text", "Notes may follow a text value, in a positional or a keyed unit; several notes are still one unit",
