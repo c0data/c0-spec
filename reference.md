@@ -227,9 +227,10 @@ RS marks a content block (paragraph) and US marks sub-elements (list items).
 
 ### References (ENQ)
 
-ENQ marks a value as a reference to data defined elsewhere. Referenced
-material must be defined **before** any reference to it (enabling single-pass
-parsing).
+ENQ marks a value as a reference to data defined elsewhere in the document,
+before or after the reference. A reference is hashed as written; resolution
+is a library lookup against the whole body. In a stream log only committed
+blocks can be looked up, so a reference resolves once its target lands.
 
 Simple reference (entire group):
 

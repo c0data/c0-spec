@@ -418,10 +418,9 @@ CAN has no effect when printed raw on a terminal, and DLE none.
 
 ## References (ENQ)
 
-**ENQ (0x05)** marks a field value as a reference to data defined elsewhere.
-Referenced material is defined **before** any reference to it, so a single
-pass with no backtracking resolves every reference; a group is defined once
-its label has been read, so a record may refer to the group it sits in.
+**ENQ (0x05)** marks a field value as a reference to data defined elsewhere
+in the same document. The target may come before or after the reference; a
+record may refer to the group it sits in.
 
 A plain name is a group:
 
@@ -440,12 +439,19 @@ segments, an empty segment, a segment that is not a name, or an empty
 reference is an error. A record whose first field is not a name cannot be
 addressed by path, and a keyed record cannot be: such records are reached
 by a group reference and a lookup in the application. The format checks a
-reference's form only; resolution is the library's, against the document's
-top-level body (a level's contents are not a namespace), and a reference
-whose target does not exist, or is defined later, is an error at resolution. A reference is hashed as the bytes it is
-written in: the pointer, not the thing pointed at; the format does not
-resolve it, and a reference whose target does not exist is an error when
-the library is asked to resolve it.
+reference's form only. Resolution is the library's, against everything the
+reader has: a document reader has the whole top-level body (a level's
+contents are not a namespace), so order does not matter, and a reference
+whose target does not exist is an error when the library is asked to
+resolve it. A reference is hashed as the bytes it is written in: the
+pointer, not the thing pointed at; resolution never changes a byte.
+
+In a **stream log** a reader has only the blocks committed so far, and
+that is the limit: a reference can be resolved only once its target has
+been committed. Nobody expects the first record of a million-record log to
+be resolvable against the last one. A log writer that wants a block to be
+self-contained writes what the block refers to first; a log consumer that
+indexes as it goes resolves a reference when its target lands.
 
     ␝tags
     ␁␞id␟label
