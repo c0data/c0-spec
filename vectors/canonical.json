@@ -51,18 +51,18 @@
       "canonical": false
     },
     {
-      "name": "keyed-sorted",
-      "desc": "Keyed record with sorted unique keys",
+      "name": "keyed-unique",
+      "desc": "Keyed record with unique keys",
       "bytes": "1e01611f3101621f32",
       "wellformed": true,
       "canonical": true
     },
     {
-      "name": "keyed-unsorted",
-      "desc": "Keys out of bytewise order: not canonical",
+      "name": "keyed-any-order",
+      "desc": "Key order is data, not a canonicality question",
       "bytes": "1e01621f3101611f32",
       "wellformed": true,
-      "canonical": false
+      "canonical": true
     },
     {
       "name": "keyed-duplicate",

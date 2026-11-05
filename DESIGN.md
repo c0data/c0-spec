@@ -127,9 +127,9 @@ Heading keys belong to the spec. Defined keys:
 | `version` | the spec revision the document was written under, a decimal integer | 1, permanently |
 | `blob`    | the trailing blob table (see Trailing Blob) | no blob |
 
-Heading values are plain, text, or a nested level; never a reference. In
-canonical form keys are unique and sorted bytewise; readers accept any
-order. A reader ignores a key it does not know, with a loud warning.
+Heading values are plain, text, or a nested level; never a reference. Keys
+are unique and stay in the order written. A reader ignores a key it does
+not know, with a loud warning.
 
 The heading is **not** a general metadata mechanism. It holds reader
 instructions only. Titles, authors, media types and the like are data and
@@ -276,10 +276,10 @@ role here: it divides the key from the value.
 
     ␞␁host␟localhost␁port␟5432
 
-A keyed record is a map. In canonical form its keys are unique and sorted
-bytewise. In non-canonical input a duplicate key means last wins, with a
-warning. A keyed record is also legal inside the heading and inside nested
-levels.
+A keyed record is a map whose entries stay in the order written; the
+format does not sort them. In canonical form its keys are unique. A
+duplicate key means last wins, with a warning. A keyed record is also legal
+inside the heading and inside nested levels.
 
 ### The header row (SOH RS)
 
@@ -589,19 +589,21 @@ whitespace.
 
 ### Order Is Significant
 
-C0DATA defines **no unordered constructs** except the keyed record. Records
-appear in order; positional fields and header columns are positional.
-Conforming codecs MUST preserve order exactly and MUST NOT reorder.
+C0DATA defines **no unordered constructs**. Records appear in order;
+positional fields and header columns are positional; the entries of a keyed
+record stay in the order written. Conforming codecs MUST preserve order
+exactly and MUST NOT reorder.
 
-A **keyed record** is a map, and its canonical order is defined by the
-format: keys unique, sorted by ascending bytewise comparison. A codec can
-check this. Other logically unordered data, a set's members or a directory's
-entries encoded as positional records, is canonicalised **by the producer**
-above the format (compare git tree objects, or RFC 8785 for JSON): where the
-producer has no domain order and no schema, the recommended default is to
-sort records bytewise by first field. This cannot be verified by the
-byte-level suite; it is a contract on producers, checked at the layer that
-knows the data is unordered.
+Canonical order for logically unordered data, a map's entries, a set's
+members, a directory's entries, is the **producer's** job, above the format
+(compare git tree objects, or RFC 8785 for JSON): the application builds
+its C0DATA in its own canonical order and a library hands the bytes back in
+that order. Where a producer has no domain order and no schema, the
+recommended default is bytewise order: a map's entries by key, records by
+first field. The byte-level suite cannot verify this; it is a contract on
+producers, checked at the layer that knows the data is unordered. The one
+thing the format does check is uniqueness: a duplicate key in a keyed
+record is non-canonical, and a reader takes the last value with a warning.
 
 ### Framing and Metadata Are Outside the Hash
 
@@ -624,7 +626,7 @@ stream.
   last content byte.
 
 A unit is hashed over its **canonicalised** bytes: layout, comments, dead
-elements and framing removed, values in their one spelling, keys sorted. A
+elements and framing removed, values in their one spelling, order kept. A
 unit that is already canonical hashes as written.
 
 For stream logs, the hashed span of a **block** is defined in Stream Mode

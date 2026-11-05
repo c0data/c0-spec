@@ -169,8 +169,8 @@
       "canonical": "1e68c3a96c6c6f1fe697a5e69cac"
     },
     {
-      "name": "keyed-record-sorted",
-      "desc": "A map encodes as a keyed record with keys sorted bytewise",
+      "name": "keyed-record-order",
+      "desc": "A map encodes as a keyed record with entries in the order given",
       "build": {
         "file": null,
         "groups": [
@@ -194,11 +194,11 @@
           }
         ]
       },
-      "canonical": "1e01686f73741f6c6f63616c686f737401706f72741f35343332"
+      "canonical": "1e01706f72741f3534333201686f73741f6c6f63616c686f7374"
     },
     {
-      "name": "keyed-byte-lex",
-      "desc": "Key order is by raw byte: 'Z' (0x5a) before 'a' (0x61)",
+      "name": "keyed-not-sorted",
+      "desc": "An encoder never sorts keys: 'b' before 'a' stays so",
       "build": {
         "file": null,
         "groups": [
@@ -209,11 +209,11 @@
               {
                 "keys": [
                   [
-                    "a",
+                    "b",
                     "1"
                   ],
                   [
-                    "Z",
+                    "a",
                     "2"
                   ]
                 ]
@@ -222,7 +222,7 @@
           }
         ]
       },
-      "canonical": "1e015a1f3201611f31"
+      "canonical": "1e01621f3101611f32"
     },
     {
       "name": "nested-list",
@@ -360,7 +360,7 @@
     },
     {
       "name": "nested-map",
-      "desc": "A map value is a level holding one keyed record, sorted",
+      "desc": "A map value is a level holding one keyed record, order kept",
       "build": {
         "file": null,
         "groups": [
@@ -394,7 +394,7 @@
           }
         ]
       },
-      "canonical": "1e6366671f101e01611f3101621f3218"
+      "canonical": "1e6366671f101e01621f3201611f3118"
     },
     {
       "name": "nested-table-header",
@@ -460,7 +460,7 @@
     },
     {
       "name": "heading-written",
-      "desc": "With a heading the file is SYN, sorted keys, body, EOT; the canonical unit is the body",
+      "desc": "With a heading the file is SYN, heading as given, body, EOT; the canonical unit is the body",
       "build": {
         "file": null,
         "groups": [
@@ -486,7 +486,7 @@
         ]
       },
       "canonical": "1d671e61",
-      "bytes": "160173686170651f746162756c61720176657273696f6e1f311d671e6104"
+      "bytes": "160176657273696f6e1f310173686170651f746162756c61721d671e6104"
     }
   ]
 }

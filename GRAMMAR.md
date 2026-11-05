@@ -167,14 +167,13 @@ A canonical unit is well-formed and additionally:
 2. spells each value once: `plain` when the value has no byte below 0x20
    and no edge whitespace, `text` otherwise; no empty text; no text
    around a value that could be plain; a group reference is plain;
-3. has, in every keyed record, keys unique and in ascending bytewise
-   order;
+3. has, in every keyed record, unique keys; their order is data and is
+   kept as written;
 4. contains no notes, dead elements, commits, SYN, heading, EOT or EM.
    The canonical document unit is a `body` with none of these.
 
-A file as written carries SYN, a heading whose keys are unique and
-sorted, the canonical body, and EOT; the heading and markers are outside
-the hash.
+A file as written carries SYN, a heading whose keys are unique, the
+canonical body, and EOT; the heading and markers are outside the hash.
 
 ## Notes for implementers
 

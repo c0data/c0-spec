@@ -160,8 +160,8 @@ sides). By convention the first field is the record's id.
 ### Keyed records (maps)
 
 SOH inside a record introduces a keyed unit: `␁key␟value`. A record is
-positional or keyed, never mixed. Keys in canonical form are unique and
-sorted.
+positional or keyed, never mixed. Keys are unique in canonical form and
+stay in the order written; sorting is the producer's choice.
 
 ```
 ␝database

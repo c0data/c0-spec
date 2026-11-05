@@ -86,10 +86,10 @@ Logical structure → expected canonical bytes. Case shape:
 
 A conforming encoder MUST produce exactly `canonical`: a value is plain
 when it has no byte below 0x20 and no edge whitespace, otherwise text
-with only STX, ETX, DLE, ETB, EOT, SYN and EM escaped; keyed records sorted
-bytewise by key; order otherwise preserved; no layout, no framing. A
-`build` with a `heading` also specifies `bytes`, the file as written:
-SYN, the heading with sorted keys, the body, EOT.
+with only STX, ETX, DLE, ETB, EOT, SYN and EM escaped; order preserved
+exactly, keyed entries included; no layout, no framing. A `build` with a
+`heading` also specifies `bytes`, the file as written: SYN, the heading
+in the order given, the body, EOT.
 
 ### canonical.json
 
@@ -102,29 +102,8 @@ Canonicality classification. Case shape:
 
 `wellformed` — the bytes tokenize without error. `canonical` — the
 bytes are a canonical document unit (well-formed, one spelling per
-value, keyed records sorted and unique, no layout, no framing, no
-comments).
-
-### map-canonical.json
-
-Producer-level canonicalization of maps. Case shape:
-
-```json
-{
-  "name": "...", "desc": "...",
-  "group": "database" | null,
-  "map": [["key", "value"], ...],
-  "canonical": "<hex>"
-}
-```
-
-A `key` is a name (a JSON string). A `value` is a JSON string,
-`{"hex": "..."}`, or `{"map": [[k, v], ...]}` for a nested map. Entries
-are given in **input (pre-sort) order**; a conforming producer MUST emit
-exactly `canonical`: one keyed record, keys sorted bytewise, a nested
-map as a level holding one keyed record, values plain or text per the
-encode rules. Since a keyed record is the format's own map, this is now
-checkable by the codec as well as by the JSON object ↔ C0 mapping.
+value, keys unique within a keyed record, no layout, no framing, no
+comments). Key order is never a canonicality question.
 
 ### invalid.json
 

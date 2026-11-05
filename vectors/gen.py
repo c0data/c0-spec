@@ -276,11 +276,11 @@ enc("binary-run", "Bytes 0x00–0x1F in a value: text, with only the seven escap
     "␞␂␀␁␐␂␐␃␐␄␅␆␇␈␉␊␋␌␍␎␏␐␐␑␒␓␔␕␐␖␐␗␘␐␙␚␛␜␝␞␟␃")
 enc("high-bytes-unescaped", "No byte >= 0x20 is ever fenced (UTF-8 passes through)",
     doc([g("", [["héllo", "日本"]])]), "␞héllo␟日本")
-enc("keyed-record-sorted", "A map encodes as a keyed record with keys sorted bytewise",
+enc("keyed-record-order", "A map encodes as a keyed record with entries in the order given",
     doc([g("", [keyed(("port", "5432"), ("host", "localhost"))])]),
-    "␞␁host␟localhost␁port␟5432")
-enc("keyed-byte-lex", "Key order is by raw byte: 'Z' (0x5a) before 'a' (0x61)",
-    doc([g("", [keyed(("a", "1"), ("Z", "2"))])]), "␞␁Z␟2␁a␟1")
+    "␞␁port␟5432␁host␟localhost")
+enc("keyed-not-sorted", "An encoder never sorts keys: 'b' before 'a' stays so",
+    doc([g("", [keyed(("b", "1"), ("a", "2"))])]), "␞␁b␟1␁a␟2")
 enc("nested-list", "A list is a level holding one record",
     doc([g("", [["Alice", level([["Admin", "Editor"]])]])]),
     "␞Alice␟␐␞Admin␟Editor␘")
@@ -290,18 +290,18 @@ enc("nested-one-empty", "A list of one empty string is a level with one empty re
 enc("nested-empty-level", "An empty level is DLE CAN", doc([g("", [[level([]), "x"]])]), "␞␐␘␟x")
 enc("reference-plain", "A group reference is plain, never text",
     doc([g("", [[{"ref": "tags"}, {"ref": ["tags", "001"]}]])]), "␞␅tags␟␅␂tags␟001␃")
-enc("nested-map", "A map value is a level holding one keyed record, sorted",
+enc("nested-map", "A map value is a level holding one keyed record, order kept",
     doc([g("", [["cfg", level([keyed(("b", "2"), ("a", "1"))])]])]),
-    "␞cfg␟␐␞␁a␟1␁b␟2␘")
+    "␞cfg␟␐␞␁b␟2␁a␟1␘")
 enc("nested-table-header", "A nested table with a header row",
     doc([g("", [[level([["1 Main", "Springfield"]], ["street", "city"])]])]),
     "␞␐␁␞street␟city␞1 Main␟Springfield␘")
 enc("file-two-groups", "Document with FS name and two groups; the canonical unit has no framing",
     doc([g("g1", [["a"]]), g("g2", [["b"]], ["x"])], file="db"),
     "␜db␝g1␞a␝g2␁␞x␞b")
-enc("heading-written", "With a heading the file is SYN, sorted keys, body, EOT; the canonical unit is the body",
+enc("heading-written", "With a heading the file is SYN, heading as given, body, EOT; the canonical unit is the body",
     doc([g("g", [["a"]])], heading=[["version", "1"], ["shape", "tabular"]]),
-    "␝g␞a", bytes_="␖␁shape␟tabular␁version␟1␝g␞a␄")
+    "␝g␞a", bytes_="␖␁version␟1␁shape␟tabular␝g␞a␄")
 
 # -------------------------------------------------------------- canonical
 canonical = []
@@ -326,8 +326,8 @@ can("layout-space", "Whitespace touching a code is layout: legal, not canonical"
     "␞a ␟b", True, False)
 can("layout-newline", "Line breaks between codes are layout",
     "␝g␊␞a", True, False)
-can("keyed-sorted", "Keyed record with sorted unique keys", "␞␁a␟1␁b␟2", True, True)
-can("keyed-unsorted", "Keys out of bytewise order: not canonical", "␞␁b␟1␁a␟2", True, False)
+can("keyed-unique", "Keyed record with unique keys", "␞␁a␟1␁b␟2", True, True)
+can("keyed-any-order", "Key order is data, not a canonicality question", "␞␁b␟1␁a␟2", True, True)
 can("keyed-duplicate", "Duplicate key: not canonical", "␞␁a␟1␁a␟2", True, False)
 can("trailing-eot", "EOT is framing: not part of a canonical document unit",
     "␞a␄", True, False)
@@ -466,28 +466,6 @@ ne("table-not-a-list", "Two records in a level form a table; the list accessor r
 ne("header-row-in-level", "A level with a header row is a named-column table",
    "␞a␟␐␁␞x␟y␞1␟2␘", ["a", level([["1", "2"]], ["x", "y"])])
 ne("empty-level", "DLE CAN: an empty level, read as an empty list", "␞a␟␐␘", ["a", lst()])
-
-# ---------------------------------------------------------- map-canonical
-mapc = []
-
-
-def mc(name, desc, group, map_, canonical_):
-    mapc.append({"name": name, "desc": desc, "group": group, "map": map_,
-                 "canonical": h(canonical_)})
-
-
-mc("basic-sort", "Two entries given out of order; sorted by key: host (0x68) before port (0x70)",
-   "database", [["port", "5432"], ["host", "localhost"]],
-   "␝database␞␁host␟localhost␁port␟5432")
-mc("byte-lex-not-alpha", "Order is by raw byte, not case-insensitive or locale: 'A' (0x41) < 'Z' (0x5a) < 'a' (0x61)",
-   None, [["a", "1"], ["Z", "2"], ["A", "3"]], "␞␁A␟3␁Z␟2␁a␟1")
-mc("empty-key-first", "The empty key sorts before any non-empty key",
-   None, [["a", "1"], ["", "0"]], "␞␁␟0␁a␟1")
-mc("nested-map-recurse", "A value that is itself a map is a level holding a keyed record, sorted recursively",
-   "cfg", [["z", "26"], ["nested", {"map": [["b", "2"], ["a", "1"]]}]],
-   "␝cfg␞␁nested␟␐␞␁a␟1␁b␟2␘␁z␟26")
-mc("text-value", "A value needing text is fenced; keys are names and never are",
-   None, [["k", "a\nb"]], "␞␁k␟␂a␊b␃")
 
 # ------------------------------------------------------------------- diff
 # A small reference applier, so the expected outputs are computed from the
@@ -829,8 +807,7 @@ df("missing-file", "A path that does not exist refuses",
 # ------------------------------------------------------------------ write
 for fname, cases in [("decode", decode), ("encode", encode),
                      ("canonical", canonical), ("invalid", invalid),
-                     ("stream", stream), ("nested", nested),
-                     ("map-canonical", mapc), ("diff", diffs)]:
+                     ("stream", stream), ("nested", nested), ("diff", diffs)]:
     names = [c["name"] for c in cases]
     assert len(names) == len(set(names)), fname
     (OUT / f"{fname}.json").write_text(

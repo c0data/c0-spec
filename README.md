@@ -16,7 +16,7 @@ depends on.
 - `reference.md` — the technical reference (format overview, control codes,
   data shapes, escaping, `c0fmt` usage).
 - `vectors/*.json` — the conformance fixtures (decode, encode, canonical,
-  invalid, stream, nested, map-canonical, diff).
+  invalid, stream, nested, diff).
 - `vectors/README.md` — the fixture schema.
 - `notes/` — design notes and proposals (non-normative): alternate
   design sketches, the schema-system proposal, and the 2026-10 proposals
