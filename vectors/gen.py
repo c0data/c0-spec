@@ -98,14 +98,14 @@ dec("text-escaped-etx", "DLE ETX inside text is a data ETX",
 dec("text-escaped-dle", "DLE DLE inside text is a data DLE",
     "␞␂a␐␐b␃", [g("", [["a\x10b"]])])
 dec("text-escaped-framing",
-    "DLE before ETB, EOT or SYN inside text is that data byte",
-    "␞␂a␐␗b␐␄c␐␖d␃", [g("", [["a\x17b\x04c\x16d"]])])
+    "DLE before ETB, EOT, SYN or EM inside text is that data byte",
+    "␞␂a␐␗b␐␄c␐␖d␐␙e␃", [g("", [["a\x17b\x04c\x16d\x19e"]])])
 dec("text-raw-newline-tab", "LF and HT inside text are data",
     "␞␂line 1␊\tline 2␃", [g("", [["line 1\n\tline 2"]])])
 dec("text-edge-spaces", "Spaces at the edges of text are data",
     "␞␂  padded  ␃␟x", [g("", [["  padded  ", "x"]])])
 dec("text-binary",
-    "Every byte but the six is data inside text, unassigned codes and non-UTF-8 included",
+    "Every byte but the seven is data inside text, unassigned codes and non-UTF-8 included",
     "␞␂␀␁\\xff␃", [g("", [[{"hex": "0001ff"}]])])
 dec("text-empty", "Empty text is the empty string (legal, not canonical)",
     "␞␂␃␟x", [g("", [["", "x"]])])
@@ -198,21 +198,31 @@ dec("heading-nested-value", "A heading value may be a level (the blob table)",
     "␖␁blob␟␐␁␞name␟offset␟length␞img␟0␟3␘␝g␞a",
     [g("g", [["a"]])],
     heading=[["blob", level([["img", "0", "3"]], ["name", "offset", "length"])]])
-dec("comment-record", "BEL before a record comments it out, up to the next RS",
+dec("comment-record", "BEL before a record marks it dead; it is parsed and discarded",
     "␝g␞a␇␞b␞c", [g("g", [["a"], ["c"]])])
+dec("comment-layout-then-record", "Layout after BEL is layout; the record is still dead",
+    "␝g␇␊␞b␞c", [g("g", [["c"]])])
+dec("comment-dead-group-line", "A dead group line; its records belong to the group before",
+    "␝g1␞1␇␝g2␞2", [g("g1", [["1"], ["2"]])])
+dec("comment-dead-keyed-unit", "A dead keyed unit is dropped from the map",
+    "␞␁a␟1␇␁b␟2␁c␟3", [g("", [keyed(("a", "1"), ("c", "3"))])])
+dec("comment-note-in-heading", "A note between heading keys",
+    "␖␁a␟1␇old␁b␟2␞x", [g("", [["x"]])], heading=[["a", "1"], ["b", "2"]])
 dec("comment-note", "A plain note after a group label",
     "␝g␇ staging only␞a", [g("g", [["a"]])])
-dec("comment-header-row", "A commented-out header row declares nothing",
+dec("comment-header-row", "A dead header row declares nothing",
     "␝g␇␁␞x␟y␞a", [g("g", [["a"]])])
 dec("comment-in-level", "Comments are allowed inside a level",
     "␞␐␇␞x␞y␘", [g("", [[level([["y"]])]])])
-dec("comment-in-field-position", "A comment in field position ends the record's content",
-    "␞Alice␟␇␐␞Admin␘␟100␞Bob", [g("", [["Alice", ""], ["Bob"]])])
-dec("comment-swallows-keyed-unit", "A bare SOH inside a comment is content",
-    "␞␁a␟1␇n␁b␟2␞x", [g("", [keyed(("a", "1")), ["x"]])])
-dec("comment-ends-at-header-row", "A comment ends at a header row",
+dec("comment-dead-level-in-field", "A dead level leaves an empty unit; the next field is live",
+    "␞Alice␟␇␐␞Admin␘␟100␞Bob", [g("", [["Alice", "", "100"], ["Bob"]])])
+dec("comment-note-in-field", "A note in field position is one empty unit",
+    "␞Alice␟␇old value␟100", [g("", [["Alice", "", "100"]])])
+dec("comment-note-between-keyed-units", "A note ends at the next code; the next key is live",
+    "␞␁a␟1␇n␁b␟2␞x", [g("", [keyed(("a", "1"), ("b", "2")), ["x"]])])
+dec("comment-ends-at-header-row", "A note ends at a header row",
     "␝g␇note␁␞x␟y␞1␟2", [g("g", [["1", "2"]], ["x", "y"])])
-dec("comment-with-text", "Text inside a comment is content of the comment",
+dec("comment-with-text", "A note that holds control codes is text",
     "␝g␇␂␞not a record␃␞a", [g("g", [["a"]])])
 dec("two-documents", "Two documents in one container, each with its own SYN",
     "␖␝g␞a␄␖␝g␞b␄", [], documents=[
@@ -247,17 +257,17 @@ enc("simple-table", "Header row and records encode in order, nothing fenced",
     "␝users␁␞name␟amount␞Alice␟100␞Bob␟200")
 enc("text-for-control-byte", "A value holding a control byte is text; RS inside text is raw",
     doc([g("", [["a\x1eb"]])]), "␞␂a␞b␃")
-enc("text-escapes-six", "Only STX, ETX, DLE, ETB, EOT, SYN take a DLE inside text",
-    doc([g("", [["\x02\x03\x10\x17\x04\x16"]])]), "␞␂␐␂␐␃␐␐␐␗␐␄␐␖␃")
+enc("text-escapes-seven", "Only STX, ETX, DLE, ETB, EOT, SYN, EM take a DLE inside text",
+    doc([g("", [["\x02\x03\x10\x17\x04\x16\x19"]])]), "␞␂␐␂␐␃␐␐␐␗␐␄␐␖␐␙␃")
 enc("text-for-newline-tab", "LF and HT in a value require text and are raw inside it",
     doc([g("", [["a\nb\tc"]])]), "␞␂a␊b␉c␃")
 enc("text-for-edge-space", "Edge whitespace requires text; interior space does not",
     doc([g("", [[" x", "y ", "Alice Smith"]])]), "␞␂ x␃␟␂y ␃␟Alice Smith")
 enc("empty-string-plain", "The empty string is written as nothing",
     doc([g("", [["", "a", ""]])]), "␞␟a␟")
-enc("binary-run", "Bytes 0x00–0x1F in a value: text, with only the six escaped",
+enc("binary-run", "Bytes 0x00–0x1F in a value: text, with only the seven escaped",
     doc([g("", [[{"hex": bytes(range(32)).hex()}]])]),
-    "␞␂␀␁␐␂␐␃␐␄␅␆␇␈␉␊␋␌␍␎␏␐␐␑␒␓␔␕␐␖␐␗␘␙␚␛␜␝␞␟␃")
+    "␞␂␀␁␐␂␐␃␐␄␅␆␇␈␉␊␋␌␍␎␏␐␐␑␒␓␔␕␐␖␐␗␘␐␙␚␛␜␝␞␟␃")
 enc("high-bytes-unescaped", "No byte >= 0x20 is ever fenced (UTF-8 passes through)",
     doc([g("", [["héllo", "日本"]])]), "␞héllo␟日本")
 enc("keyed-record-sorted", "A map encodes as a keyed record with keys sorted bytewise",
@@ -300,7 +310,7 @@ can("plain-table", "Ordinary table, nothing fenced, no framing",
     "␝g␁␞a␟b␞1␟2", True, True)
 can("text-necessary", "Text around a value holding a control byte: canonical",
     "␞␂a␟b␃", True, True)
-can("text-escaped-six", "DLE before one of the six inside text: canonical",
+can("text-escaped-seven", "DLE before one of the seven inside text: canonical",
     "␞␂a␐␗b␃", True, True)
 can("text-gratuitous", "Text around a value that could be plain: not canonical",
     "␞␂only␃", True, False)
@@ -319,11 +329,11 @@ can("etb-framing", "ETB is framing: not part of a canonical document unit",
     "␞a␗", True, False)
 can("syn-heading", "SYN and the heading are framing: not part of a canonical document unit",
     "␖␁shape␟stream␞a", True, False)
-can("comment", "A comment is outside the hash: not part of a canonical unit",
+can("comment", "A note is outside the hash: not part of a canonical unit",
     "␝g␇note␞a", True, False)
 can("raw-lf-in-plain", "LF inside a plain value: malformed", "␞a␊b", False, False)
 can("dle-mid-value", "DLE in the middle of a plain value: malformed", "␞a␐b", False, False)
-can("dle-before-plain-in-text", "DLE before a byte that is not one of the six: malformed",
+can("dle-before-plain-in-text", "DLE before a byte that is not one of the seven: malformed",
     "␞␂a␐bc␃", False, False)
 can("dangling-dle", "DLE at end of input: malformed", "␞␂a␐", False, False)
 can("unassigned-code", "Bare unassigned control byte: malformed", "␞a␆b", False, False)
@@ -348,7 +358,7 @@ inv("raw-lf-in-plain", "LF in the middle of a plain value", "␞a␊b")
 inv("raw-tab-in-plain", "HT in the middle of a plain value", "␞a␉b")
 inv("dle-before-us", "DLE must be followed by a structural code or CAN", "␞a␟␐␟b")
 inv("dle-before-plain", "DLE followed by a plain byte outside text", "␞␐x␘")
-inv("dle-before-plain-in-text", "DLE inside text before a byte that is not one of the six", "␞␂a␐bc␃")
+inv("dle-before-plain-in-text", "DLE inside text before a byte that is not one of the seven", "␞␂a␐bc␃")
 inv("dangling-dle", "DLE at end of input has nothing to escape", "␞␂a␐")
 inv("text-unclosed", "Text open at end of input", "␞␂abc")
 inv("stx-inside-text", "Text does not nest", "␞␂a␂b␃␃")
@@ -362,6 +372,10 @@ inv("sub-outside-diff", "SUB has no meaning outside a diff", "␞a␚b")
 inv("bytes-after-eot", "After EOT only layout, SYN or EM may follow", "␖␞a␄x")
 inv("reference-empty-name", "A reference needs a name", "␞␅␟x")
 inv("em-inside-level", "EM while a level is open", "␞␐␞a␙raw")
+inv("em-inside-text", "EM cuts through text; raw EM inside text is an error for a document reader", "␞␂a␙b␃")
+inv("bel-before-us", "BEL before US: US is not an element", "␞a␇␟b")
+inv("bel-before-etb", "Framing cannot be commented out", "␞a␇␗")
+inv("bel-before-can", "BEL before CAN", "␞␐␞a␇␘")
 inv("text-after-can", "Text after CAN belongs to nothing", "␞␐␘x")
 inv("mixed-record", "Positional then keyed units in one record", "␞a␁k␟v")
 inv("key-without-value", "SOH, key, then a record-level code with no US", "␞␁k␞x")

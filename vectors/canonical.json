@@ -16,8 +16,8 @@
       "canonical": true
     },
     {
-      "name": "text-escaped-six",
-      "desc": "DLE before one of the six inside text: canonical",
+      "name": "text-escaped-seven",
+      "desc": "DLE before one of the seven inside text: canonical",
       "bytes": "1e026110176203",
       "wellformed": true,
       "canonical": true
@@ -94,7 +94,7 @@
     },
     {
       "name": "comment",
-      "desc": "A comment is outside the hash: not part of a canonical unit",
+      "desc": "A note is outside the hash: not part of a canonical unit",
       "bytes": "1d67076e6f74651e61",
       "wellformed": true,
       "canonical": false
@@ -115,7 +115,7 @@
     },
     {
       "name": "dle-before-plain-in-text",
-      "desc": "DLE before a byte that is not one of the six: malformed",
+      "desc": "DLE before a byte that is not one of the seven: malformed",
       "bytes": "1e026110626303",
       "wellformed": false,
       "canonical": false

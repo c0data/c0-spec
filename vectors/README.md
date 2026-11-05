@@ -65,7 +65,7 @@ A single group with `"name": ""` and `"file": null` means the buffer is
 a bare record stream. Expected records follow the contract exactly: N
 separators = N+1 fields; an empty record is one empty field; whitespace
 touching a code is layout and never appears in a value; ETB, EOT, SYN
-and BEL comments are framing and never appear in names, headers, or
+and BEL notes and dead elements are framing and never appear in names, headers, or
 fields; a keyed record reports its units as written, duplicates
 included (a map lookup resolves last-wins with a warning).
 
@@ -128,11 +128,13 @@ checkable by the codec as well as by the JSON object ↔ C0 mapping.
 
 ### invalid.json
 
-Bytes that MUST be rejected: `{"name", "desc", "bytes"}` — tokenizing
-raises (unassigned code, DLE outside text or before the wrong byte,
-layout code inside a plain value, unbalanced text or level, a label
-after SI, a mixed record, a key without a value, a name written as
-text).
+Bytes that MUST be rejected by a document reader: `{"name", "desc",
+"bytes"}` — parsing raises (unassigned code, DLE before the wrong byte
+inside or outside text, layout code inside a plain value, unbalanced
+text or level, framing inside open text or a level, a mixed record, a
+key without a value, a name written as text, SUB outside a diff, bytes
+after EOT, BEL before a non-element). A stream reader reports the same
+shapes in an uncommitted tail as torn rather than as errors.
 
 ### stream.json
 

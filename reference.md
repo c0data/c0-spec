@@ -23,7 +23,7 @@ full specification and future directions.
 | 0x03 | ETX | ␃ | End of text |
 | 0x04 | EOT | ␄ | End of document |
 | 0x05 | ENQ | ␅ | Reference (look up named data) |
-| 0x07 | BEL | ␇ | Comment |
+| 0x07 | BEL | ␇ | Comment: a note, or marks the next element dead |
 | 0x10 | DLE | ␐ | Recurse: open a nested level (outside text); escape (inside text) |
 | 0x16 | SYN | ␖ | Start of document, then the heading |
 | 0x17 | ETB | ␗ | Commit marker (stream mode) |
@@ -37,7 +37,7 @@ full specification and future directions.
 
 Sixteen codes. HT, LF and CR are layout outside text. Every other C0
 code is unassigned and a parser rejects it outside text. Inside text
-every code is a plain byte except six (see Text).
+every code is a plain byte except seven (see Text).
 
 ### Structural Hierarchy
 
@@ -182,8 +182,8 @@ table of pairs.
 ### Text (STX/ETX)
 
 A value with edge whitespace, a line break, a tab, or any control code is
-written as text. Inside text every byte is data except six, which take a
-DLE in front: STX, ETX, DLE, ETB, EOT, SYN. Text does not nest.
+written as text. Inside text every byte is data except seven, which take
+a DLE in front: STX, ETX, DLE, ETB, EOT, SYN, EM. Text does not nest.
 
 ```
 ␞Alice␟␂  padded  ␃
@@ -248,18 +248,21 @@ US separates path segments: group → record id → field name.
 
 ### Comments (BEL)
 
-BEL begins a comment that runs to the end of the enclosing element (the next
-FS, GS, RS, `␁␞`, DLE, SYN, EOT, ETB, EM, BEL, or the closing CAN). A code
-directly after the BEL belongs to the comment, so a BEL in front of a
-record, group line, header row or nested value comments it out. A comment
-in field position runs to the end of its record.
+BEL marks the next thing dead. BEL followed by text is a note, which ends
+at the next control code like any other code's text. BEL followed by a
+structural code marks that element dead: a record, group line, header row,
+keyed unit, file line or nested level is parsed as written and then
+discarded. A note that must hold control codes is text: `␇␂…␃`.
 
 ```
 ␇ settings for staging
 ␝server
   ␇␞␁host␟old.example.com
-  ␞␁host␟0.0.0.0␁port␟8080
+  ␞␁host␟0.0.0.0␁port␟8080␇ was 9090
 ```
+
+Layout after the BEL is layout, so `␇␊␞x` is a dead record. BEL before
+US, ETX, CAN or a framing code is an error.
 
 ### Stream logs (ETB)
 
@@ -374,9 +377,9 @@ substitution. A diff should carry `shape␟diff` in its heading.
 
 ## Escaping (DLE)
 
-Inside text, DLE (0x10) precedes one of six codes to make it a data byte:
-STX, ETX, DLE, ETB, EOT, SYN. Outside text no control code is data, and
-DLE means recurse (see Nested values).
+Inside text, DLE (0x10) precedes one of seven codes to make it a data
+byte: STX, ETX, DLE, ETB, EOT, SYN, EM. Outside text no control code is
+data, and DLE means recurse (see Nested values).
 
 ```
 ␞␂a␐␃b␃        the three bytes a, ETX, b

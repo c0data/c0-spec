@@ -7,7 +7,7 @@ admits everywhere outside text through `L`. Canonical form is a subset
 stated as constraints at the end; it is not a separate grammar.
 
 This grammar describes well-formed input. Framing that cuts through an
-open text or level (an unescaped ETB, EOT or SYN inside one) is not
+open text or level (an unescaped ETB, EOT, SYN or EM inside one) is not
 well-formed; a document reader rejects it and a stream reader handles it
 by the rules in DESIGN.md.
 
@@ -36,50 +36,58 @@ CR therefore occur outside text only as layout; one in the middle of a
 plain value matches no production. Layout never changes the meaning of
 the codes around it.
 
-## Start symbols
+## Start symbol
 
-    input     = L ( container / body / diff-body )
+    input     = L *document [ EM *OCTET ]
+    document  = [ SYN L heading ] ( body / diff-body ) [ EOT L ]
 
-    container = 1*document [ EM *OCTET ]
-    document  = SYN L heading ( body / diff-body ) [ EOT L ]
-
-A file or message is a `container`. A slice handled on its own (a group,
-a record, a log body read without its heading) is a `body`; DESIGN.md
-makes a missing SYN a loud warning, not an error. Everything after EM, to
-the end of the container, is the raw region declared in the first
-document's heading. Which of `body` and `diff-body` applies is decided by
-the heading's `shape`, or by the reader's caller when `shape` is absent.
+A file or message is a sequence of documents, each with SYN; a document
+without SYN is well-formed and draws DESIGN.md's loud warning, which is
+how a slice (a group, a record, a log body) is read on its own.
+Everything after EM, to the end of the input, is the raw region declared
+in the first document's heading. Which of `body` and `diff-body` applies
+is decided by the heading's `shape`, or by the reader's caller when
+`shape` is absent.
 
 ## Heading and body
 
-    heading   = *keyed-unit
+    heading   = *( keyed-unit / note )
 
-    body      = part *( FS L name L part )
-    part      = *comment [ header-row ] *item *group
-    group     = 1*( GS L ) name L *comment [ header-row ] *item
-    item      = record / comment / commit
+    body      = part *( file-line part )
+    file-line = [ BEL L ] FS L name L
+    part      = *note [ header-row ] *item *group
+    group     = group-line *note [ header-row ] *item
+    group-line = [ BEL L ] 1*( GS L ) name L
+    item      = record / note / commit
 
-A document's heading ends where its body begins: at the first code that
-is not inside a keyed unit. A log is a document whose heading declares
-`shape` `stream`; its items include commits. Records and groups before
-the first FS belong to an unnamed file; records before the first GS of a
-part belong to an unnamed group. A header row is the first item of a
-part, a group or a level, after any comments. `GS L GS` is depth two; an
-empty-named group therefore cannot directly precede another group.
+The heading ends where the body begins: at the first code that is neither
+part of a keyed unit nor a note. A log is a document whose heading
+declares `shape` `stream`; its items include commits. Records and groups
+before the first FS belong to an unnamed file; records before the first
+GS of a part belong to an unnamed group. A header row is the first item
+of a part, a group or a level, after any notes. `GS L GS` is depth two;
+an empty-named group therefore cannot directly precede another group.
+Commits occur only at depth zero: `lbody` below is `body` without them.
+
+    lbody     = lpart *( file-line lpart )
+    lpart     = *note [ header-row ] *litem *lgroup
+    lgroup    = group-line *note [ header-row ] *litem
+    litem     = record / note
 
 ## Records
 
-    record      = RS L ( keyed / positional )
+    record      = [ BEL L ] RS L ( keyed / positional )
     positional  = [ value ] *( US L [ value ] )
     keyed       = 1*keyed-unit
-    keyed-unit  = SOH L name L US L [ value ]
+    keyed-unit  = [ BEL L ] SOH L name L US L [ value ]
 
-    header-row  = SOH L RS L name L *( US L name L )
+    header-row  = [ BEL L ] SOH L RS L name L *( US L name L )
 
 A record is keyed or positional, never both. `RS` alone is a positional
 record of one empty field. `SOH` followed (after layout) by `RS` is a
-header row; `SOH` followed by anything else begins a keyed unit. The
-heading's keyed units take `hvalue` in place of `value` (no reference).
+header row; `SOH` followed by anything else begins a keyed unit, which
+occurs only in a record or the heading. The heading's keyed units take
+`hvalue` in place of `value` (no reference).
 
 ## Values
 
@@ -87,48 +95,47 @@ heading's keyed units take `hvalue` in place of `value` (no reference).
     hvalue    = ( plain / text / level ) L
 
     text      = STX *tbyte ETX
-    tbyte     = %x00-01 / %x05-0F / %x11-15 / %x18-FF
-              / DLE ( STX / ETX / DLE / ETB / EOT / SYN )
+    tbyte     = %x00-01 / %x05-0F / %x11-15 / %x18 / %x1A-FF
+              / DLE ( STX / ETX / DLE / ETB / EOT / SYN / EM )
 
-    level     = DLE L body CAN
+    level     = [ BEL L ] DLE L lbody CAN
 
-    reference = ENQ L ( plain / text )
+    reference = ENQ L ( plain / STX 1*tbyte ETX )
 
-Inside text every byte is data except STX, ETX, DLE, ETB, EOT and SYN,
-each of which is data only after a DLE. Text does not nest. A level is
-DLE, then a body whose first token is a code (`FS`, `GS`, `RS`, `SOH` or
-`BEL`; `body` admits no leading plain text), then CAN; an empty body
-gives the empty level, `DLE CAN`. The DLE is on the opener only. A reference is a group name,
-or a path of two or three segments separated by US inside text
-(`[ENQ][STX]group[US]record[US]field[ETX]`); the name is non-empty.
+Inside text every byte is data except STX, ETX, DLE, ETB, EOT, SYN and
+EM, each of which is data only after a DLE. Text does not nest. A level
+is DLE, then a body whose first token is a code (`FS`, `GS`, `RS`, `SOH`
+or `BEL`; `lbody` admits no leading plain text and no commit), then CAN;
+an empty body gives the empty level, `DLE CAN`. The DLE is on the opener
+only. A reference is a group name, or a path of two or three non-empty
+segments separated by US inside text
+(`[ENQ][STX]group[US]record[US]field[ETX]`); text with one segment is a
+group reference.
 
 ## Comments and commits
 
-    comment    = BEL [ introducer ] *( cbyte / text / level )
-    introducer = FS / GS / RS / SOH [ L RS ] / US / level
-    cbyte      = SP / HT / LF / CR / nsp / US / ENQ / SUB / csoh
-    csoh       = <SOH not followed by L RS>
+    note      = BEL L [ plain / text ] L
 
-    commit     = ETB L [ plain ] L
+    commit    = ETB L [ plain ] L
 
-A comment runs to the next FS, GS, RS, `SOH RS`, DLE, SYN, EOT, ETB, EM
-or BEL at its own depth, or the CAN of the level it sits in. An
-introducer directly after the BEL belongs to the comment, so a comment
-neutralises the record, group line, header row or nested level it is
-written in front of. A bare SOH inside a comment is content: a comment
-written in field position therefore runs to the end of its record. A
-commit's plain text is its payload.
+BEL owns the text after it like any other code: a `note` is skipped by
+the reader. A `[ BEL L ]` in front of a record, header row, keyed unit,
+group line, file line or level marks that element **dead**: it is parsed
+as written and then discarded. BEL before any other code (US, ETX, CAN,
+ETB, EOT, SYN, EM) matches no production. A commit's plain text is its
+payload; the commit ends the record before it.
 
 ## C0-DIFF
 
-    diff-body = *( FS L name L *( GS L pattern L *comment ) )
+    diff-body = *( file-line *note *( [ BEL L ] GS L pattern L *note ) )
     pattern   = unit *( US L unit )
     unit      = [ dvalue ] [ SUB L [ dvalue ] ]
     dvalue    = ( plain / text ) L
 
 A diff's heading should carry `shape` `diff`. A unit without SUB is an
 anchor; with SUB it is a substitution, old then new. RS, SOH, DLE and ENQ
-do not occur in a diff body; SUB does not occur outside one.
+do not occur in a diff body; SUB does not occur outside one. A dead GS
+kills its pattern; a dead FS kills its file.
 
 ## Canonical constraints
 
@@ -140,8 +147,8 @@ A canonical unit is well-formed and additionally:
    around a value that could be plain; a group reference is plain;
 3. has, in every keyed record, keys unique and in ascending bytewise
    order;
-4. contains no framing or metadata: no comment, commit, SYN, heading,
-   EOT or EM. The canonical document unit is a `body` with none of these.
+4. contains no notes, dead elements, commits, SYN, heading, EOT or EM.
+   The canonical document unit is a `body` with none of these.
 
 A file as written carries SYN, a heading whose keys are unique and
 sorted, the canonical body, and EOT; the heading and markers are outside
@@ -151,16 +158,15 @@ the hash.
 
 - Outside text, the hot test is `byte < 0x20`; on a hit, the byte's
   meaning is fixed by this grammar with one code of lookahead (`SOH` then
-  `RS`, `DLE` then the first code of the level, with layout between) and
-  no lookbehind.
-- Inside text, the reader looks for six byte values; the parity of the
+  `RS`; `BEL` then the code it kills; `DLE` then the first code of the
+  level; layout may lie between) and no lookbehind.
+- Inside text, the reader looks for seven byte values; the parity of the
   DLE run before one of them says whether it is escaped, a lookbehind
-  bounded by the run's length. A backward scan for the last ETB counts
-  the same run.
+  bounded by the run's length. A backward scan for the last ETB or for EM
+  counts the same run.
 - A scanner that skips a level must skip text whole: a raw RS, US or CAN
   inside text matches `tbyte`, not a code. It counts DLE openers against
   CANs to find the level's end.
 - Mid-buffer resynchronisation (first unescaped bracket decides inside or
-  outside text; an unescaped SYN is a document start) holds only before
-  EM; a reader cannot tell it is inside the raw region without the first
-  heading.
+  outside text; an unescaped SYN is a document start) holds everywhere
+  before EM, and EM is itself found by the same scan.

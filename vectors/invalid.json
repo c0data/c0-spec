@@ -38,7 +38,7 @@
     },
     {
       "name": "dle-before-plain-in-text",
-      "desc": "DLE inside text before a byte that is not one of the six",
+      "desc": "DLE inside text before a byte that is not one of the seven",
       "bytes": "1e026110626303"
     },
     {
@@ -105,6 +105,26 @@
       "name": "em-inside-level",
       "desc": "EM while a level is open",
       "bytes": "1e101e6119726177"
+    },
+    {
+      "name": "em-inside-text",
+      "desc": "EM cuts through text; raw EM inside text is an error for a document reader",
+      "bytes": "1e0261196203"
+    },
+    {
+      "name": "bel-before-us",
+      "desc": "BEL before US: US is not an element",
+      "bytes": "1e61071f62"
+    },
+    {
+      "name": "bel-before-etb",
+      "desc": "Framing cannot be commented out",
+      "bytes": "1e610717"
+    },
+    {
+      "name": "bel-before-can",
+      "desc": "BEL before CAN",
+      "bytes": "1e101e610718"
     },
     {
       "name": "text-after-can",

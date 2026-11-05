@@ -195,8 +195,8 @@
     },
     {
       "name": "text-escaped-framing",
-      "desc": "DLE before ETB, EOT or SYN inside text is that data byte",
-      "bytes": "1e026110176210046310166403",
+      "desc": "DLE before ETB, EOT, SYN or EM inside text is that data byte",
+      "bytes": "1e026110176210046310166410196503",
       "file": null,
       "groups": [
         {
@@ -204,7 +204,7 @@
           "headers": null,
           "records": [
             [
-              "a\u0017b\u0004c\u0016d"
+              "a\u0017b\u0004c\u0016d\u0019e"
             ]
           ]
         }
@@ -247,7 +247,7 @@
     },
     {
       "name": "text-binary",
-      "desc": "Every byte but the six is data inside text, unassigned codes and non-UTF-8 included",
+      "desc": "Every byte but the seven is data inside text, unassigned codes and non-UTF-8 included",
       "bytes": "1e020001ff03",
       "file": null,
       "groups": [
@@ -1186,7 +1186,7 @@
     },
     {
       "name": "comment-record",
-      "desc": "BEL before a record comments it out, up to the next RS",
+      "desc": "BEL before a record marks it dead; it is parsed and discarded",
       "bytes": "1d671e61071e621e63",
       "file": null,
       "groups": [
@@ -1202,6 +1202,96 @@
             ]
           ]
         }
+      ]
+    },
+    {
+      "name": "comment-layout-then-record",
+      "desc": "Layout after BEL is layout; the record is still dead",
+      "bytes": "1d67070a1e621e63",
+      "file": null,
+      "groups": [
+        {
+          "name": "g",
+          "headers": null,
+          "records": [
+            [
+              "c"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-dead-group-line",
+      "desc": "A dead group line; its records belong to the group before",
+      "bytes": "1d67311e31071d67321e32",
+      "file": null,
+      "groups": [
+        {
+          "name": "g1",
+          "headers": null,
+          "records": [
+            [
+              "1"
+            ],
+            [
+              "2"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-dead-keyed-unit",
+      "desc": "A dead keyed unit is dropped from the map",
+      "bytes": "1e01611f310701621f3201631f33",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            {
+              "keys": [
+                [
+                  "a",
+                  "1"
+                ],
+                [
+                  "c",
+                  "3"
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-note-in-heading",
+      "desc": "A note between heading keys",
+      "bytes": "1601611f31076f6c6401621f321e78",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "x"
+            ]
+          ]
+        }
+      ],
+      "heading": [
+        [
+          "a",
+          "1"
+        ],
+        [
+          "b",
+          "2"
+        ]
       ]
     },
     {
@@ -1223,7 +1313,7 @@
     },
     {
       "name": "comment-header-row",
-      "desc": "A commented-out header row declares nothing",
+      "desc": "A dead header row declares nothing",
       "bytes": "1d6707011e781f791e61",
       "file": null,
       "groups": [
@@ -1265,8 +1355,8 @@
       ]
     },
     {
-      "name": "comment-in-field-position",
-      "desc": "A comment in field position ends the record's content",
+      "name": "comment-dead-level-in-field",
+      "desc": "A dead level leaves an empty unit; the next field is live",
       "bytes": "1e416c6963651f07101e41646d696e181f3130301e426f62",
       "file": null,
       "groups": [
@@ -1276,7 +1366,8 @@
           "records": [
             [
               "Alice",
-              ""
+              "",
+              "100"
             ],
             [
               "Bob"
@@ -1286,8 +1377,27 @@
       ]
     },
     {
-      "name": "comment-swallows-keyed-unit",
-      "desc": "A bare SOH inside a comment is content",
+      "name": "comment-note-in-field",
+      "desc": "A note in field position is one empty unit",
+      "bytes": "1e416c6963651f076f6c642076616c75651f313030",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "Alice",
+              "",
+              "100"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-note-between-keyed-units",
+      "desc": "A note ends at the next code; the next key is live",
       "bytes": "1e01611f31076e01621f321e78",
       "file": null,
       "groups": [
@@ -1300,6 +1410,10 @@
                 [
                   "a",
                   "1"
+                ],
+                [
+                  "b",
+                  "2"
                 ]
               ]
             },
@@ -1312,7 +1426,7 @@
     },
     {
       "name": "comment-ends-at-header-row",
-      "desc": "A comment ends at a header row",
+      "desc": "A note ends at a header row",
       "bytes": "1d67076e6f7465011e781f791e311f32",
       "file": null,
       "groups": [
@@ -1333,7 +1447,7 @@
     },
     {
       "name": "comment-with-text",
-      "desc": "Text inside a comment is content of the comment",
+      "desc": "A note that holds control codes is text",
       "bytes": "1d6707021e6e6f742061207265636f7264031e61",
       "file": null,
       "groups": [
