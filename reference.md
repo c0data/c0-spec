@@ -295,82 +295,31 @@ a blob by name.
 
 ## C0DIFF
 
-C0DIFF provides atomic multi-file edits using **anchored patterns**. Instead
-of line numbers (which shift), you provide literal context text as anchors
-surrounding the parts you want to change.
-
-### How It Works
-
-A section is a sequence of **units** separated by US. Each unit is either:
-
-- **Anchor text** -- literal content that must match exactly (provides context)
-- **Substitution** -- `old[SUB]new` (the part that actually changes)
-
-Units are concatenated to build a search pattern. The pattern must match
-**exactly once** in the file. Then only the SUB-marked parts are replaced.
-Each anchor, old and new is an ordinary value: plain, or text when it holds
-a line break, a tab, edge whitespace or a control code.
-
-### Example
-
-Given a file `greeting.txt` containing `Hello world!`:
+C0DIFF provides atomic multi-file edits using **anchored patterns**: literal
+context text surrounding the parts to change, instead of line numbers. It
+is a profile of C0DATA (`shape␟diff`), specified in full in
+[DIFF.md](DIFF.md).
 
 ```
 ␖␁shape␟diff
 ␜greeting.txt
   ␝␂Hello ␃␟world␚universe␟!
+␜tally.rb
+  ␝def tally(items)
+  ␞count␚total
+  ␝end
 ␄
 ```
 
-This breaks down as:
-
-| Unit | Type | Search contributes | Replacement contributes |
-|------|------|-------------------|------------------------|
-| `␂Hello ␃` | anchor | `Hello ` | `Hello ` |
-| `world␚universe` | substitution | `world` | `universe` |
-| `!` | anchor | `!` | `!` |
-
-Search pattern: `Hello world!` (must match exactly once).
-Replacement: `Hello universe!` (only `world` → `universe` changes).
-
-### Anchors
-
-You can anchor on one side, both sides, or use multiple substitutions:
-
-```
-# Anchor before only (enough if "def run" is unique in context)
-␝␂class App
-  def ␃␟run␚start
-
-# Anchors before and after (more precise)
-␝␂Hello ␃␟world␚universe␟!
-
-# Multiple substitutions in one section
-␝␂x = ␃␟10␚20␟␂ + ␃␟5␚15
-# Finds "x = 10 + 5", produces "x = 20 + 15"
-```
-
-Whitespace next to a code is layout, so an anchor that begins or ends with
-a space, or spans lines, is written as text; `world` and `!` need no fence.
-
-### Atomicity Guarantee
-
-1. **Validate first** -- every section's search pattern is checked against
-   every target file. Each pattern must match **exactly once**. Zero
-   matches → error. Multiple matches → error.
-2. **Apply only if all pass** -- if any pattern in any file fails validation,
-   **nothing is modified**. No partial writes, no half-applied diffs.
-3. **Then write** -- all replacements are applied and files are written.
-
-A C0DIFF document is an all-or-nothing transaction across multiple files.
-
-### Relationship to C0DATA
-
-C0DIFF shares the same control code vocabulary. FS and GS retain their
-structural meanings (file boundary, section/group boundary). US retains
-its role as a unit-level separator. Text is the same mechanism. SUB takes
-on a diff-specific role that aligns with its original C0 semantic --
-substitution. A diff should carry `shape␟diff` in its heading.
+- `␝` begins a section: a pattern of US-separated units, each an anchor or
+  an `old␚new` substitution. The pattern must match exactly once after the
+  previous section's match.
+- `␞old␚new` after a section replaces **every** occurrence within that
+  section's scope (to the next section's match, or end of file).
+- Empty old inserts; empty new deletes; a section with no `␚` asserts.
+- Anchors with edge whitespace or line breaks are text (`␂…␃`).
+- All files are validated before any is written; any error anywhere means
+  nothing is written.
 
 
 ---

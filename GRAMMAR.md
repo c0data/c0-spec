@@ -127,15 +127,20 @@ payload; the commit ends the record before it.
 
 ## C0-DIFF
 
-    diff-body = *( file-line *note *( [ BEL L ] GS L pattern L *note ) )
+    diff-body = *( file-line *note *replace *section )
+    section   = [ BEL L ] GS L pattern L *note *replace
+    replace   = [ BEL L ] RS L dvalue SUB L [ dvalue ] *note
     pattern   = unit *( US L unit )
     unit      = [ dvalue ] [ SUB L [ dvalue ] ]
     dvalue    = ( plain / text ) L
 
 A diff's heading should carry `shape` `diff`. A unit without SUB is an
-anchor; with SUB it is a substitution, old then new. RS, SOH, DLE and ENQ
-do not occur in a diff body; SUB does not occur outside one. A dead GS
-kills its pattern; a dead FS kills its file.
+anchor; with SUB it is a substitution, old then new. A `replace` is a
+replace-all within the scope of the section before it (or the whole file
+when it precedes every section); its old part is non-empty. SOH, DLE and
+ENQ do not occur in a diff body; SUB does not occur outside one. A dead GS
+kills its section, a dead RS its replace-all, a dead FS its file. The
+semantics are in `DIFF.md`.
 
 ## Canonical constraints
 

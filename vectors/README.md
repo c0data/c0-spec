@@ -156,6 +156,23 @@ An unescaped ETB is always a commit, inside text or a level too; a block
 so cut is listed in `damaged`. `records` (optional) — logical records of
 the committed region, headings and header rows excluded.
 
+### diff.json
+
+C0-DIFF application (`DIFF.md`). Case shape:
+
+```json
+{"name": "...", "desc": "...",
+ "files": {"path": "contents before", ...},
+ "diff": "<hex>",
+ "result": {"path": "contents after", ...}   // or
+ "error": true}
+```
+
+`files` and `result` are UTF-8 strings (the cases use text files). A
+conforming diff tool given `files` and `diff` produces exactly `result`,
+or refuses without writing when `error` is true. The cases are generated
+by a reference applier in `gen.py` that follows `DIFF.md` literally.
+
 ### nested.json
 
 Nested levels (DLE … CAN) in a single record, and the list convenience. Case shape:

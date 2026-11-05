@@ -11,10 +11,12 @@ depends on.
 - `DESIGN.md` — the specification (the normative format definition).
 - `GRAMMAR.md` — the formal grammar (ABNF) of well-formed input, with the
   canonical constraints.
+- `DIFF.md` — the C0-DIFF profile: anchored patterns, replace-all,
+  atomicity.
 - `reference.md` — the technical reference (format overview, control codes,
   data shapes, escaping, `c0fmt` usage).
 - `vectors/*.json` — the conformance fixtures (decode, encode, canonical,
-  invalid, stream).
+  invalid, stream, nested, map-canonical, diff).
 - `vectors/README.md` — the fixture schema.
 - `notes/` — design notes and proposals (non-normative): alternate
   design sketches, the schema-system proposal, and the 2026-10 proposals

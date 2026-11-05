@@ -479,11 +479,278 @@ mc("nested-map-recurse", "A value that is itself a map is a level holding a keye
 mc("text-value", "A value needing text is fenced; keys are names and never are",
    None, [["k", "a\nb"]], "␞␁k␟␂a␊b␃")
 
+# ------------------------------------------------------------------- diff
+# A small reference applier, so the expected outputs are computed from the
+# rules in DIFF.md rather than typed by hand. It handles what the vectors
+# use: SYN heading, FS/GS/RS/US/SUB, text with escapes, notes, layout.
+SEVEN = {0x02, 0x03, 0x10, 0x17, 0x04, 0x16, 0x19}
+LAYOUT = {0x09, 0x0A, 0x0D, 0x20}
+
+
+class DiffError(Exception):
+    pass
+
+
+def _value(bs, i):
+    """Read one value (plain or text) starting at i; return (bytes, next i)."""
+    while i < len(bs) and bs[i] in LAYOUT:
+        i += 1
+    if i < len(bs) and bs[i] == 0x02:
+        out = bytearray(); i += 1
+        while True:
+            if i >= len(bs):
+                raise DiffError("text unclosed")
+            x = bs[i]
+            if x == 0x10:
+                if i + 1 >= len(bs) or bs[i + 1] not in SEVEN:
+                    raise DiffError("bad escape")
+                out.append(bs[i + 1]); i += 2; continue
+            if x == 0x03:
+                i += 1; break
+            if x in (0x17, 0x04, 0x16, 0x19):
+                raise DiffError("framing inside text")
+            out.append(x); i += 1
+        while i < len(bs) and bs[i] in LAYOUT:
+            i += 1
+        if i < len(bs) and bs[i] >= 0x20:
+            raise DiffError("text spliced")
+        return bytes(out), i
+    start = i
+    while i < len(bs) and bs[i] >= 0x20:
+        i += 1
+    end = i
+    while end > start and bs[end - 1] in LAYOUT:
+        end -= 1
+    val = bs[start:end]
+    if any(c < 0x20 for c in val):
+        raise DiffError("layout code inside plain value")
+    return bytes(val), i
+
+
+def _parse_diff(bs):
+    """→ list of (path, [ops]); op = ("section", [units]) | ("replace", old, new);
+    unit = (anchor_bytes, None) | (old, new)."""
+    i = 0; files = []
+    if i < len(bs) and bs[i] == 0x16:          # heading
+        i += 1
+        while True:
+            while i < len(bs) and bs[i] in LAYOUT:
+                i += 1
+            if i < len(bs) and bs[i] == 0x01:
+                k, i = _value(bs, i + 1)
+                if i >= len(bs) or bs[i] != 0x1F:
+                    raise DiffError("key without value")
+                v, i = _value(bs, i + 1)
+                if k == b"shape" and v != b"diff":
+                    raise DiffError("shape is not diff")
+            elif i < len(bs) and bs[i] == 0x07:
+                _, i = _value(bs, i + 1)
+            else:
+                break
+    cur = None
+    while i < len(bs):
+        x = bs[i]
+        if x in LAYOUT:
+            i += 1; continue
+        if x == 0x07:                             # note or dead element
+            j = i + 1
+            while j < len(bs) and bs[j] in LAYOUT:
+                j += 1
+            if j < len(bs) and bs[j] < 0x20:
+                dead_code = bs[j]
+                # parse the dead element by recursion on a copy and drop it
+                sub, k = _parse_one(bs, j)
+                i = k; continue
+            _, i = _value(bs, i + 1); continue
+        if x == 0x04:
+            i += 1; continue
+        if x == 0x1C:
+            path, i = _value(bs, i + 1)
+            cur = (path.decode(), []); files.append(cur); continue
+        if x in (0x1D, 0x1E):
+            if cur is None:
+                raise DiffError("section before any file")
+            op, i = _parse_one(bs, i)
+            cur[1].append(op); continue
+        raise DiffError("unexpected byte %#x" % x)
+    return files
+
+
+def _parse_one(bs, i):
+    x = bs[i]
+    if x == 0x1D:
+        units = []; i += 1
+        while True:
+            a, i = _value(bs, i)
+            if i < len(bs) and bs[i] == 0x1A:
+                b, i = _value(bs, i + 1)
+                units.append((a, b))
+            else:
+                units.append((a, None))
+            if i < len(bs) and bs[i] == 0x1F:
+                i += 1; continue
+            break
+        return ("section", units), i
+    if x == 0x1E:
+        old, i = _value(bs, i + 1)
+        if i >= len(bs) or bs[i] != 0x1A:
+            raise DiffError("replace-all without SUB")
+        new, i = _value(bs, i + 1)
+        if not old:
+            raise DiffError("replace-all with empty old")
+        return ("replace", old, new), i
+    if x == 0x1C:
+        path, i = _value(bs, i + 1)
+        return ("file", path), i
+    raise DiffError("unexpected byte %#x" % x)
+
+
+def _apply_file(data, ops):
+    # pass 1: decide section matches on the original bytes
+    cursor = 0; matches = []        # (start, end, replacement)
+    pending_replaces = []           # replaces attached to section index (or -1 for whole file)
+    sec_idx = -1
+    for op in ops:
+        if op[0] == "section":
+            units = op[1]
+            search = b"".join(a for a, _ in units)
+            repl = b"".join(a if b is None else b for a, b in units)
+            if not search:
+                raise DiffError("empty search text")
+            first = data.find(search, cursor)
+            if first < 0:
+                raise DiffError("pattern not found")
+            if data.find(search, first + 1) >= 0:
+                raise DiffError("pattern matched more than once")
+            matches.append((first, first + len(search), repl))
+            cursor = first + len(search); sec_idx += 1
+        else:
+            pending_replaces.append((sec_idx, op[1], op[2]))
+    # scopes: from end of match i to start of match i+1 (or EOF); -1 → 0..start of match 0
+    def scope(idx):
+        lo = 0 if idx < 0 else matches[idx][1]
+        hi = matches[idx + 1][0] if idx + 1 < len(matches) else len(data)
+        return lo, hi
+    # pass 2: build output from pieces: segments between matches get replace-alls
+    pieces = []; pos = 0
+    bounds = [(-1, 0, matches[0][0] if matches else len(data))]
+    for k, (st, en, repl) in enumerate(matches):
+        nxt = matches[k + 1][0] if k + 1 < len(matches) else len(data)
+        bounds.append((k, en, nxt))
+    out = bytearray()
+    seg_text = {}
+    for idx, lo, hi in bounds:
+        seg = data[lo:hi]
+        for sidx, old, new in pending_replaces:
+            if sidx == idx:
+                n = seg.count(old)
+                if n == 0:
+                    raise DiffError("replace-all found nothing")
+                seg = seg.replace(old, new)
+        seg_text[idx] = seg
+    out += seg_text[-1]
+    for k, (st, en, repl) in enumerate(matches):
+        out += repl
+        out += seg_text[k]
+    return bytes(out)
+
+
+def apply_diff(files, diff_bytes):
+    parsed = _parse_diff(diff_bytes)
+    result = dict(files)
+    for path, ops in parsed:
+        if path not in files:
+            raise DiffError("no such file: " + path)
+        result[path] = _apply_file(files[path], ops)
+    return result
+
+
+diffs = []
+
+
+def df(name, desc, files, diff, expect=None, error=False):
+    fb = {k: v.encode() for k, v in files.items()}
+    try:
+        got = apply_diff(fb, b(diff))
+        if error:
+            raise AssertionError(f"{name}: expected an error, got {got}")
+    except DiffError as e:
+        if not error:
+            raise AssertionError(f"{name}: unexpected error {e}")
+        diffs.append({"name": name, "desc": desc, "files": files, "diff": h(diff), "error": True})
+        return
+    if expect is not None:
+        exp = {k: v.encode() for k, v in expect.items()}
+        assert got == exp, f"{name}: got {got} expected {exp}"
+    diffs.append({"name": name, "desc": desc, "files": files, "diff": h(diff),
+                  "result": {k: v.decode() for k, v in got.items()}})
+
+
+D = "␖␁shape␟diff"
+df("simple", "One substitution with anchors on both sides",
+   {"greeting.txt": "Hello world!"}, D + "␜greeting.txt␝␂Hello ␃␟world␚universe␟!␄",
+   {"greeting.txt": "Hello universe!"})
+df("anchor-before-only", "Anchor on one side is enough when it is unique",
+   {"app.rb": "class App\n  def run\n  end\nend\n"},
+   D + "␜app.rb␝␂class App\n  def ␃␟run␚start␄",
+   {"app.rb": "class App\n  def start\n  end\nend\n"})
+df("two-substitutions", "Several substitutions in one pattern",
+   {"m.txt": "x = 10 + 5\n"}, D + "␜m.txt␝␂x = ␃␟10␚20␟␂ + ␃␟5␚15␄",
+   {"m.txt": "x = 20 + 15\n"})
+df("insertion", "An empty old part inserts",
+   {"a.py": "import os\nprint(1)\n"}, D + "␜a.py␝␂import os␃␟␚␂\nimport sys␃␄",
+   {"a.py": "import os\nimport sys\nprint(1)\n"})
+df("deletion", "An empty new part deletes",
+   {"a.txt": "keep # TODO remove\n"}, D + "␜a.txt␝␂ # TODO remove␃␚␄",
+   {"a.txt": "keep\n"})
+df("assertion", "A section with no substitution asserts and moves the cursor",
+   {"a.txt": "one\ntwo\none\n"}, D + "␜a.txt␝two␝one␚uno␄",
+   {"a.txt": "one\ntwo\nuno\n"})
+df("sequential-sections", "Each section is searched after the previous match, so a later 'a' is unambiguous",
+   {"a.txt": "a b\na c\n"}, D + "␜a.txt␝␂a b␃␚X␝a␚Z␄", {"a.txt": "X\nZ c\n"})
+df("ambiguous-after-cursor", "Exactly once means once in the text after the cursor",
+   {"a.txt": "a b a b\n"}, D + "␜a.txt␝a␚A␄", error=True)
+df("anchor-mismatch", "An anchor that does not match byte for byte (here, extra indentation) refuses",
+   {"c.cr": "def run\n  return 0\nend\n"},
+   D + "␜c.cr␝␂  def run\n␃␟␂  return 0␃␚␂  return 1␃␄",
+   error=True)
+df("multiline-text-anchor-ok", "The anchor must match the file's bytes exactly",
+   {"c.cr": "def run\n  return 0\nend\n"},
+   D + "␜c.cr␝␂def run\n␃␟␂  return 0␃␚␂  return 1␃␄",
+   {"c.cr": "def run\n  return 1\nend\n"})
+df("replace-all-in-scope", "RS replaces every occurrence between this section's match and the next",
+   {"t.rb": "count = 0\ndef tally(items)\n  count = 0\n  items.each { count += 1 }\n  count\nend\ncount\n"},
+   D + "␜t.rb␝def tally(items)␞count␚total␝end␄",
+   {"t.rb": "count = 0\ndef tally(items)\n  total = 0\n  items.each { total += 1 }\n  total\nend\ncount\n"})
+df("replace-all-to-eof", "After the last section the scope runs to the end of the file",
+   {"a.txt": "x\n--\nx x\n"}, D + "␜a.txt␝--␞x␚y␄", {"a.txt": "x\n--\ny y\n"})
+df("replace-all-whole-file", "RS before any section applies to the whole file (up to the first match)",
+   {"a.txt": "x x\n--\nx\n"}, D + "␜a.txt␞x␚y␝--␄", {"a.txt": "y y\n--\nx\n"})
+df("replace-all-in-order", "Several RS lines apply in order",
+   {"a.txt": "--\na a\n"}, D + "␜a.txt␝--␞a␚b␞b␚c␄", {"a.txt": "--\nc c\n"})
+df("two-files", "Several files in one diff",
+   {"a.txt": "foo\n", "b.txt": "bar\n"}, D + "␜a.txt␝foo␚FOO␜b.txt␝bar␚BAR␄",
+   {"a.txt": "FOO\n", "b.txt": "BAR\n"})
+df("note-and-dead-section", "A note is skipped; a dead section is parsed and ignored",
+   {"a.txt": "foo bar\n"}, D + "␜a.txt␇ careful␝foo␚FOO␇␝bar␚BAR␄", {"a.txt": "FOO bar\n"})
+df("no-match", "A pattern that matches nothing refuses the whole diff",
+   {"a.txt": "foo\n", "b.txt": "bar\n"}, D + "␜a.txt␝foo␚FOO␜b.txt␝baz␚BAZ␄", error=True)
+df("ambiguous", "A pattern that matches twice refuses",
+   {"a.txt": "foo foo\n"}, D + "␜a.txt␝foo␚FOO␄", error=True)
+df("replace-all-nothing", "A replace-all with zero occurrences refuses",
+   {"a.txt": "--\nfoo\n"}, D + "␜a.txt␝--␞bar␚baz␄", error=True)
+df("replace-all-empty-old", "A replace-all needs a non-empty old part",
+   {"a.txt": "--\n"}, D + "␜a.txt␝--␞␚x␄", error=True)
+df("wrong-shape", "A heading that contradicts the diff tool refuses",
+   {"a.txt": "foo\n"}, "␖␁shape␟stream␜a.txt␝foo␚bar␄", error=True)
+df("missing-file", "A path that does not exist refuses",
+   {"a.txt": "foo\n"}, D + "␜b.txt␝foo␚bar␄", error=True)
+
 # ------------------------------------------------------------------ write
 for fname, cases in [("decode", decode), ("encode", encode),
                      ("canonical", canonical), ("invalid", invalid),
                      ("stream", stream), ("nested", nested),
-                     ("map-canonical", mapc)]:
+                     ("map-canonical", mapc), ("diff", diffs)]:
     names = [c["name"] for c in cases]
     assert len(names) == len(set(names)), fname
     (OUT / f"{fname}.json").write_text(

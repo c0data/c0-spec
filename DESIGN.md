@@ -430,7 +430,10 @@ because a US would otherwise end the field; ENQ reads its text as a path:
 group → record id → field name, where the record id is the record's first
 field and the field name is a header name. Text with one segment is a group
 reference, legal and not canonical; four or more segments, an empty segment,
-or an empty name is an error. A reference is hashed as the bytes it is
+or an empty name is an error. Segments are split on US, so a record whose
+first field is text containing a US cannot be addressed by path: an id used
+as an address is a name in practice, and such a record is still reachable
+by a group reference and a lookup in the application. A reference is hashed as the bytes it is
 written in: the pointer, not the thing pointed at; the format does not
 resolve it, and a reference whose target does not exist is an error when
 the library is asked to resolve it.
@@ -732,54 +735,25 @@ store (see Speculations, sidecar pattern).
 
 ## C0-DIFF (Atomic Multi-File Edits)
 
-C0-DIFF is a control-code markup format for atomic multi-file edits. It uses
-sequential anchored patterns: literal text acts as anchors that must match
-exactly once, and SUB-delimited units mark the replacements.
-
-### Format
-
-    ␖␁shape␟diff
-    ␜<filepath>␝<anchor>␟<old>␚<new>␟<anchor>
-    ␄
-
-US separates the units of the pattern, anchor text from replacement units.
-**SUB (0x1A)** is the substitution operator within a unit: old, SUB, new.
-Each anchor, old and new is a value under the ordinary rules: plain, or text
-where it holds a line break, a tab, edge whitespace or a control code. Since
-whitespace next to a code is layout, an anchor that begins or ends with a
-space is text.
+C0-DIFF is a **profile** of C0DATA: a document whose heading declares
+`shape` `diff`, holding anchored patterns that edit files atomically. It is
+specified in `DIFF.md`; this section fixes only what the data format must
+know.
 
     ␖␁shape␟diff
     ␜foo.txt
     ␝␂Hello ␃␟world␚universe␟!
-    ␜main.cr
-    ␝␂  def run
-    ␃␟␂    return 0␃␚␂    return 1␃
+    ␞count␚total
     ␄
 
-The first means: in `foo.txt`, find `Hello world!` and replace `world` with
-`universe`. A pattern's search text is the concatenation of its anchors and
-old parts; it must match exactly once in the text after the previous
-pattern's match. An empty old part is an insertion, an empty new part a
-deletion, a pattern with no SUB an assertion that the anchor is present, a
-file with no patterns a no-op. Multiple files can be edited in one
-document. All files are validated before any writes happen (atomic
-rollback).
-
-A diff SHOULD carry `shape␟diff`: a diff tool accepts an unspecified shape
-and refuses a contradicting one, but a generic reader given a diff with no
-shape rejects it at the first byte that fits no data production. Comments
-follow the ordinary rule: a note ends at the next code, a BEL before GS
-kills that pattern and before FS that file. RS, SOH, DLE and ENQ have no
-meaning in a diff and are errors there; SUB has no meaning outside a diff
-and is an error elsewhere. Framing applies as everywhere.
-
-### Relationship to C0DATA
-
-FS and GS keep their structural meanings, US its unit role, text its
-meaning. SUB takes a diff-specific role aligned with its original C0
-semantic, substitution. A replace-all form is not yet defined; it must not
-reuse the text brackets or the level opener.
+In a diff body FS begins a file, GS a section (one anchored pattern whose
+US-separated units are anchors or `old␚new` substitutions), RS a
+replace-all within the section's scope, and **SUB (0x1A)** separates old
+from new. Anchors, olds and news are values under the ordinary rules,
+plain or text. SOH, DLE and ENQ are errors in a diff body; SUB is an error
+outside one. Comments and framing apply as everywhere. The grammar is
+`diff-body` in `GRAMMAR.md`; the matching, scope and atomicity rules are
+in `DIFF.md`; the vectors are `vectors/diff.json`.
 
 
 ## A Full Example (Database)
@@ -815,13 +789,8 @@ C0DATA is a system, not a single format. The same vocabulary expresses:
 
 ## Open Questions
 
-- **Replace-all in C0-DIFF:** a notation for replacing every match within a
-  bounded scope. Must not reuse brackets.
-- **Type tags:** whether a nested level may open with a keyed unit that
-  names its type (`␐␁type␟…`, an error today), and whether a registry of
-  tags belongs to the spec.
-- **Reference paths with ids that contain US:** a path cannot address them;
-  whether that matters.
+None at present. Type tags are held under Speculations; the diff's
+replace-all is defined in `DIFF.md`.
 
 
 ## Speculations
@@ -860,8 +829,10 @@ replacing `location` with `offset`.
 ### Type Discrimination (Numbers vs Text)
 
 All values are text. If type information is ever needed, a nested level that
-opens with a keyed unit (`␐␁type␟rgb␞255␟0␟0␘`, an error today) is the
-position held for it; a
+opens with a keyed unit (`␐␁type␟rgb␞255␟0␟0␘`) is the position **reserved**
+for it: that form is an error today, so no file carries one, and a future
+revision may define it under additive versions once a schema system gives
+tags a meaning. A
 header-level convention (`␁␞name:s␟amount:n`) is the alternative. Today the
 application decides, as JSON numbers are simply unquoted text.
 
