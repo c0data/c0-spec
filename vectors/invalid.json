@@ -102,6 +102,11 @@
       "bytes": "1e051f78"
     },
     {
+      "name": "reference-segment-not-name",
+      "desc": "Every path segment is a name: no edge whitespace, no control bytes",
+      "bytes": "1e0502611f206203"
+    },
+    {
       "name": "em-inside-level",
       "desc": "EM while a level is open",
       "bytes": "1e101e6119726177"

@@ -172,6 +172,21 @@
       ]
     },
     {
+      "name": "em-tail-not-torn",
+      "desc": "EM after the last commit opens the raw region, which is not data of the log: not torn",
+      "bytes": "1e611719726177",
+      "committed_end": 3,
+      "torn": false,
+      "blocks": [
+        "1e61"
+      ],
+      "records": [
+        [
+          "a"
+        ]
+      ]
+    },
+    {
       "name": "tail-only-layout",
       "desc": "A tail of layout alone is not torn",
       "bytes": "1e61170a",
