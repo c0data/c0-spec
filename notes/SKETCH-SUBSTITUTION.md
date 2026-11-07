@@ -105,6 +105,141 @@ writing anything, atomic writes, the error list. All unchanged.
 - `shape␟diff` stops selecting a grammar. It stays as what every shape's
   name is: a statement of what the document is for.
 
+## Second target: a C0DATA file
+
+**Status:** proposed, from a thought experiment on 2026-11-06. Nothing here
+is decided.
+
+The challenge: write a diff against a C0DATA file rather than a text
+file. It tests whether the block shape above is the format's shape or an
+artefact of text patching.
+
+Target for every example, `accounts.c0`:
+
+    ␖␁shape␟tabular
+    ␝users
+    ␁␞name␟amount
+    ␞Alice␟1502.30
+    ␞Bob␟340.00
+    ␄
+
+### It already works, as bytes
+
+Inside `␂…␃` only seven codes are escaped; FS GS RS US SOH are raw, so an
+anchor can spell structure as bytes:
+
+    ␚␝
+    ␞␂␞Bob␟␃␟340.00␟350.00␟␂
+    ␃
+
+That is a diff of a file that happens to hold C0DATA. Anything in the
+target that is not data breaks it: a reformat, a value re-spelled, a note,
+a header row. A reader sees bytes, not a change to Bob's amount. The one
+good thing about it is that the block shape needed no change to express it.
+
+### Matching elements instead of bytes
+
+Two moves, both with machinery the format already has. **Locating is a
+reference:** a boundary record's one unit may be `ENQ`, and the path
+ladder (group, record by id, field by header name) is the one a diff
+needs. **Old and new are values, and a record or group quoted as a value
+is a level** `␐…␘`.
+
+Change one field (the boundary narrows the scope to one element, so no
+anchor is needed):
+
+    ␚␝
+    ␞␅␂users␟Bob␟amount␃
+    ␞␟340.00␟350.00
+
+Change a field anchored by its neighbouring unit (the keyed-record case,
+which paths cannot reach):
+
+    ␞␅users
+    ␞Bob␟340.00␟350.00
+
+Replace a record; insert a record after Alice; delete Bob:
+
+    ␞␅users
+    ␞␟␐␞Bob␟340.00␘␟␐␞Bob␟350.00␘
+    ␞␐␞Alice␟1502.30␘␟␟␐␞Carol␟12.00␘
+    ␞␟␐␞Bob␟340.00␘␟
+
+Same four columns as the text diff; insertion has a position because
+record order is data. Exact-once in scope, cursor, validate-then-write
+and atomicity carry over unchanged.
+
+The mirror spelling, the target record with the change inline
+(`␞Bob␟340.00␚350.00`), reads well for one field and is ruled out: it
+cannot insert or delete a record, cannot touch a group, puts SUB back
+inside a record, and gives a substitution record a second column rule.
+
+### Bytes and elements: what differs
+
+A column of a substitution record is either a byte string or a sequence
+of elements. That is the whole difference, and everything below follows.
+
+| | text (bytes) | data (elements) |
+|---|---|---|
+| a column | a byte string | plain/text value = one unit; level = records (or a group) |
+| search | `before old after` concatenated, once in scope | adjacent sibling elements, once in scope |
+| compared as | bytes as written | values after parsing; spelling does not count |
+| scope, cursor | byte offsets | tree positions; an ENQ boundary's scope is the element it names |
+| layout, notes, header rows in target | break anchors that span them | invisible |
+| insertion | at a byte offset; can produce an ill-formed file | between elements; well-formed by construction |
+| replace-all | every occurrence, overlaps counted | every equal element in scope |
+| can edit | anything, including half a value | elements only; old is a whole unit |
+| needs | nothing | a parser and serialiser of the target |
+
+`␞Bob␟340.00␟350.00` shows the gap: as bytes it searches `Bob340.00`,
+contiguous, and does not match the file (there is a US between); as
+elements it is unit `Bob` then unit `340.00` in one record, and matches.
+The bytes form of the same edit is `␞␂Bob␟␃␟340.00␟350.00`.
+
+Two rules the element grain needs that bytes never did:
+
+1. **One grain per substitution record.** All non-empty columns are the
+   same kind of element: all units, or all record levels. Mixed is an
+   error.
+2. **Adjacency means siblings.** Unit before and unit old are consecutive
+   units of one record; record before and record old are consecutive
+   records of one group.
+
+Because `Bob` is a legal column in both grains and means different
+things, the grain is declared in the heading, not inferred. Proposed key:
+`match`, values `text` (default; every existing diff: the target is read
+as text) and `data` (the target is parsed as C0DATA). "Text" is the word
+`DIFF.md` already uses for the target. The key's name is open; see below.
+
+### What the experiment settles, if adopted
+
+- **The block shape holds** under a change of target with no new grammar.
+- **The anchor rule is a proxy.** `␞␟340.00␟350.00` after a field
+  boundary has no anchor and is safe, because the scope is one element.
+  The rule is: `before old after` matches exactly once in the current
+  scope. Anchors and boundaries are two ways to make that true. An
+  unanchored substitution is forbidden only in the leading scope, before
+  any boundary. This also answers Open 3: the second of two
+  substitutions on one line is legal when it is unique in the scope.
+- **Replace-all's constraint is statable:** legal only inside a scope a
+  boundary opened, never in the leading scope, never with an empty old.
+  Its spelling is still open.
+- **SUB placement is unmoved.** Making `␚␝users` mirror the target group
+  was considered and rejected: the GS name would mean the block's own
+  label in a text diff and the target's group in a data diff. Locators
+  belong in boundary records.
+- **Matching compares values after parsing**, so plain and text spellings
+  of one value match. That is the point over the bytes form.
+
+### Still open from this section
+
+- Group-level edits: rename or delete a group means old and new are
+  levels holding the whole group. Probably correct and rare.
+- Paths cannot reach keyed records or anything inside a level (existing
+  reference rule); such edits anchor by neighbouring units or quote the
+  record. A limit, not a bug.
+- The heading key's name and values.
+
 ## Open
 
 1. **Placement of SUB.** `SUB GS` is the sketch. The user is not yet sure
@@ -127,6 +262,14 @@ writing anything, atomic writes, the error list. All unchanged.
 5. **Name.** Code patch and editorial markup are the same structure.
    "diff" names one use. "substitution" or "markup" may be the better
    shape name.
+6. **Anchor rule.** Keep "at least one of before/after non-empty", or
+   replace it with "exactly once in the current scope, unanchored
+   forbidden only in the leading scope" as the second section proposes.
+7. **Grain key.** Whether the heading declares text versus data
+   matching, and under what key (`match␟text` / `match␟data` proposed;
+   the values are agreed in discussion, the key name is not).
+8. **Element-grain rules** (one grain per record, adjacency means
+   siblings) and group-level edits, from the second section.
 
 ## Use cases
 
