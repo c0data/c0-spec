@@ -240,11 +240,92 @@ as text) and `data` (the target is parsed as C0DATA). "Text" is the word
   record. A limit, not a bug.
 - The heading key's name and values.
 
+## Third case: markup inside a document
+
+**Status:** proposed, from discussion on 2026-11-07. The order `SUB DLE`
+was agreed in discussion; nothing is normative yet.
+
+This is not search and replace. An editor marks up a document in place:
+the mark sits where the change is, so position is the anchor and nothing
+is searched. The marks are part of the document.
+
+### Where a mark goes
+
+A marked span is an **island** inside a text value: a substitution level
+opened in the text, holding a body, closed by CAN, with the text resuming
+after it. The text stays one value.
+
+    ␞␂Hello Mr. ␚␐␞Davis␟Davidson␇misremembered␘. How are you today?␃
+
+Inside the island the grammar is body grammar: `␞Davis␟Davidson` is an
+ordinary record, `␇misremembered` an ordinary note, `␘` the ordinary
+closer. A CAN in the surrounding text is still a plain byte; the island,
+not the text, is what the closer ends. A bare prose file is the content
+of one text value, so the same notation applies to it unchanged.
+
+Cutting the paragraph into units at each mark instead (run-split) is
+ruled out: in the document shape a US in a block is a list item, every
+run with edge whitespace would need a fence, and the paragraph stops being
+one value.
+
+### The marks
+
+The island holds one record: the span as it was, then the span as it
+should be. One unit is a comment on a span; two units are a change,
+either side possibly empty. No omitted-column rule.
+
+    substitute    Hello Mr. ␚␐␞Davis␟Davidson␇misremembered␘. How are you today?
+    insert        Hello ␚␐␞␟Mr. ␘Davis.
+    delete        Hello ␚␐␞Mr. ␟␘Davis.
+    comment       Hello Mr. ␚␐␞Davis␇check spelling␘.
+
+Because the island is a body, richer marks cost nothing new. Who and
+when, as a keyed record when the remark is data rather than a note:
+
+    ␚␐␞␁old␟Davis␁new␟Davidson␁by␟tom␁on␟2026-11-07␘
+
+Two records in one island are two proposed readings. An island inside a
+unit of another island is a reply to a mark.
+
+### Three readings
+
+*Original* takes the first unit everywhere; *clean* takes the second;
+*marked* shows both with the remarks. The marks are content: hashed and
+canonical. The editor's hand is part of the record.
+
+### Whole paragraphs
+
+A span cannot cross a record boundary and need not. Deleting a paragraph
+already exists: bare BEL before RS marks the record dead. Inserting or
+replacing one suggests the same prefix at record level,
+`␚␞old paragraph␟new paragraph`, SUB saying "this record's units are old
+and new". Not thought through; noted because it falls out of the same
+idea.
+
+### What it settles about SUB, if adopted
+
+SUB goes **before** the opener it qualifies, the way `BEL GS`, `SOH RS`
+and `BEL DLE` do: `␚␝name` opens a substitution block, `␚␐…␘` a
+substitution level. One rule in every position. The alternative written
+first, `␐␚`, would make DLE inside text mean "a code follows", the reverse
+of its escape sense, and would put SUB on the other side of the opener
+from the block form.
+
+Consequence: inside text SUB becomes the **eighth escaped code**. A raw
+SUB in text opens an island and a literal SUB is written `␐␚`. Values
+already fence SUB, since any control code forces text spelling; what
+changes is the tokenizer's escape set in every port and the text vectors.
+Literal SUB in real text is rare (it is the DOS end-of-file mark). The
+same bytes `␚␐…␘` also work as a substitution level in unit position
+outside text.
+
 ## Open
 
-1. **Placement of SUB.** `SUB GS` is the sketch. The user is not yet sure
-   of it. Alternatives raised: `SUB FS` ("every section in this file is a
-   block", saves a byte per block, nothing else); both.
+1. **Placement of SUB.** `SUB GS` is the sketch. Alternatives raised:
+   `SUB FS` ("every section in this file is a block", saves a byte per
+   block, nothing else); both. The third section settles the *order*
+   (SUB before the opener it qualifies) in discussion; which openers take
+   it (GS, DLE, RS, FS) is still open.
 2. **Replace-all.** Left out of the original design on purpose: a
    replace-all with no constraints is how a diff makes mistakes. The
    current `DIFF.md` bounds it to a section's scope and forbids an empty
@@ -270,6 +351,11 @@ as text) and `data` (the target is parsed as C0DATA). "Text" is the word
    the values are agreed in discussion, the key name is not).
 8. **Element-grain rules** (one grain per record, adjacency means
    siblings) and group-level edits, from the second section.
+9. **Inline islands.** Adopting `␚␐…␘` inside text makes SUB the eighth
+   escaped code (tokenizer and text vectors change in every port). Needs
+   a decision before any grammar text is written.
+10. **Record-level SUB** (`␚␞old␟new`) for whole-paragraph marks: whether
+    it exists.
 
 ## Use cases
 
