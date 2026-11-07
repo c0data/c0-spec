@@ -71,20 +71,21 @@ the package version.
 
 ## What is open
 
-1. **C0-DIFF review.** The author wants to review C0-DIFF as a whole before
+1. **C0DIFF review.** The author wants to review the diff as a whole before
    1.0 is tagged. It currently uses a second grammar (`diff-body`) with the
    pattern on the GS line, which fails the framework rule that every shape
-   parses under the base grammar. The direction worked out so far is in
-   `notes/SKETCH-SUBSTITUTION.md`: `SUB GS` marks a substitution block;
-   inside are boundary records (one unit) and substitution records
-   (`before␟old␟new␟after`, at least one anchor, unique within scope).
-   **Undecided:** placement of SUB (`SUB GS` vs `SUB FS`), whether
-   replace-all exists at all and under what constraints (the author's
-   standing concern: it was left out originally because an unconstrained
-   replace-all makes mistakes), anchoring of consecutive substitutions,
-   header rows in blocks, the shape's name. Settle constraints before
-   spelling. Affects DIFF.md, GRAMMAR.md, 32 diff vectors, and the diff
-   modules of Crystal, JS, Rust, Go and C.
+   parses under the base grammar. The direction worked out (2026-11-07) is
+   in `notes/SKETCH-SUBSTITUTION.md`: the pair `old␚new` becomes a unit
+   kind of the base grammar, and a diff is files of records whose plain
+   units are anchors and whose pairs are substitutions; the semantics of
+   DIFF.md carry over unchanged. Two separate proposals ride alongside and
+   do not gate 1.0: islands (a level inside text) for editor markup, and
+   supersession (`SUB` before FS/GS/RS replaces the previous sibling) for
+   data and logs. **Undecided:** the pair as grammar (yes/no), replace-all
+   (constraints stated, no mark), where uniqueness is measured, GS in a
+   diff. Affects DIFF.md, GRAMMAR.md, 32 diff vectors, and the diff
+   modules of Crystal, JS, Rust, Go and C. The name drops its hyphen:
+   C0DIFF.
 2. **Tags and releases.** Tag `v1.0.0` across all repos after the C0-DIFF
    review. Registry names: `c0` is taken on npm; `c0data` is free on npm,
    crates.io, PyPI and RubyGems. Recommendation on record: publish as
@@ -101,7 +102,7 @@ the package version.
 
 1. Read DESIGN.md, then GRAMMAR.md, then DIFF.md, then
    `notes/SKETCH-SUBSTITUTION.md`.
-2. Decide the C0-DIFF questions above, constraints first.
+2. Decide the C0DIFF questions above, constraints first.
 3. Update DIFF.md and GRAMMAR.md; regenerate vectors with `vectors/gen.py`;
    port Crystal first (it is the reference), then the others, each
    against the vectors; never hand-edit a vector.
