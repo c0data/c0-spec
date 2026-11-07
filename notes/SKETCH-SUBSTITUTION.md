@@ -30,17 +30,28 @@ that it put the pattern on the GS line, so GS stopped meaning "group".
 Proposed addition to `GRAMMAR.md`:
 
     unit  = value / level / reference / pair
-    pair  = [ value ] SUB [ value ]            value = plain / text
+    pair  = value SUB value                    value = plain / text
 
-SUB inside text stays a plain byte; a pair is spelled outside text, each
-side in its one spelling:
+Both sides are always present; an empty side is spelled as empty text,
+`␂␃`. SUB inside text stays a plain byte; a pair is spelled outside text,
+each side in its one spelling:
 
-    world␚universe        ␂Hello ␃␚␂Hi ␃        ␚new        old␚
+    world␚universe        ␂Hello ␃␚␂Hi ␃        ␂␃␚new        old␚␂␃
 
 Meaning: the left value is wrong, the right value replaces it. Empty left
 is an insertion, empty right a deletion. A pair keeps the record's unit
 count, as the 1963 SUB kept the record's length; that is why the change
 is inside the unit and not a `SUB US` that would add one.
+
+Why the sides are mandatory: with an optional side, `old␚␞end` reads
+both as a deletion followed by a record and as a record followed by a
+SUB-qualified one. With both sides present the byte after SUB decides
+everything with no lookahead: a plain byte or STX is the right side; a
+code is not a pair. `SUB` before an opener is therefore a free,
+unambiguous slot (see Supersession below). Canonical form: `␂␃` is the
+one spelling of an empty pair side, as text is the one spelling of a
+value with edge whitespace. Two bytes per insertion or deletion is the
+price.
 
 A shape that does not define the pair rejects it, as SUB is rejected
 outside a diff today. Two shapes define it: diff (below) and document
@@ -77,7 +88,7 @@ shape does.
     ␜tally.rb
     ␞def tally(items)                 boundary
     ␞␂  ␃␟count␚total␟␂ = 0␃          anchored both sides
-    ␞␂  # TODO␃␚                      deletion, anchored by indent
+    ␞␂  # TODO␃␚␂␃                    deletion, anchored by indent
     ␞␂x = ␃␟10␚20␟ + ␟5␚15            two substitutions, one record
     ␞end                              boundary
 
@@ -125,8 +136,8 @@ holding a record, closed by CAN, with the text resuming after it.
     ␞␂Hello Mr. ␐␞Davis␚Davidson␇misremembered␘. How are you today?␃
 
     substitute    Hello Mr. ␐␞Davis␚Davidson␘. How are you today?
-    insert        Hello ␐␞␚Mr. ␘Davis.
-    delete        Hello ␐␞Mr. ␚␘Davis.
+    insert        Hello ␐␞␂␃␚Mr. ␘Davis.
+    delete        Hello ␐␞Mr. ␚␂␃␘Davis.
     comment       Hello Mr. ␐␞Davis␇check spelling␘.
 
 A record of one plain unit is a comment on a span. Richer marks cost
@@ -152,47 +163,42 @@ island inside text. A document without islands scans exactly as before.
 Run-split (cutting the paragraph into units at each mark) was considered
 and ruled out: a US in a block is a list item in the document shape.
 
-## Data: supersession
+## Data: supersession (exploratory)
 
-Separate proposal for `DESIGN.md`, a base rule beside the dead marker.
-Does not gate C0DIFF and does not apply to text, which has no siblings.
+**Status:** exploratory only (2026-11-07). Not proposed for any version.
+Kept because the idea is sound and the slot is reserved; not adopted
+because of two problems below.
 
-SUB before an opener supersedes the previous sibling of that kind:
+SUB before an opener would supersede the previous sibling of that kind:
 
     ␚␜name      the previous file
     ␚␝name      the previous group at that depth
     ␚␞…         the previous record in the group
 
-    ␜foo.txt
-    ␝chart
-    ␞A␟B␟C
-    ␇␂wait, that is wrong␃
-    ␚␜bar.txt           supersedes foo.txt, groups and all
-    ␝chart
-    ␞A␟B␟C
-
 This is the 1963 rule lifted a grain: the writer found the mistake right
-after making it and fixes it in band. It is the one way to correct a
-committed block in a stream log: append `␚␞` and the right record, and
-every reader agrees what stands. It pairs with BEL: `␇␞` kills what
-follows (known before writing), `␚␞` replaces what precedes (found out
-after).
+after making it and fixes it in band, which is the one way to correct a
+committed block in an append-only log. It pairs with BEL: `␇␞` kills
+what follows (known before writing), `␚␞` replaces what precedes (found
+out after). It is data correction and has nothing to do with C0DIFF,
+which is text replacement and annotation.
 
-Questions, with a lean on each:
+**Why it is not adopted:**
 
-1. Base rule, not shape rule. One sentence in `DESIGN.md`; no shape can
-   change it.
-2. One step back only, to the sibling that currently stands after earlier
-   corrections; `␚␞` after `␚␞` replaces the replacement. Older mistakes
-   are a job for an anchored diff.
-3. No previous sibling: error, like CAN with no open level.
-4. `␚␞` followed directly by the next code: replaced by nothing, a
-   deletion.
-5. Canonical form and hashing: a log hashes as written, the correction is
-   data. Whether a document's canonical form applies or carries
-   corrections is open and not to be decided now.
+1. **It cannot say which.** "The prior one" is a position. A log
+   correction needs an address: a key, a sequence number, a path
+   reference. The deferred data-target diff has addresses; this does
+   not. Until it can name its target it does not do the job it was
+   wanted for.
+2. **The consumer retracts.** The parser never backtracks (the byte after
+   SUB decides), but whoever already received the previous element must
+   undo it. Every other construct in the format looks forward. A
+   non-retracting streaming consumer would have to hold the last sibling:
+   one record for `␚␞`, a whole group or file for `␚␝` and `␚␜`,
+   unbounded. If anything is ever adopted it is the record grain only.
 
-The builder writes it today: bare `sub` before `fs`, `gs` or `rs`.
+The pair's mandatory sides keep `SUB <opener>` free for whatever
+addressing form this eventually takes. The builder's bare `sub` writes
+the byte; it has no defined meaning.
 
 ## Against a C0DATA target
 
@@ -209,7 +215,7 @@ key name `match` should be reserved now.
 
 - **Code patch:** C0DIFF, what `DIFF.md` was written for.
 - **Editor markup:** pairs and islands in a document.
-- **Log correction:** supersession after a commit.
+- **Log correction:** supersession after a commit (exploratory).
 
 ## Discarded on the way
 
@@ -231,7 +237,8 @@ their own vectors; neither is needed for C0DIFF.
 
 ## How to resume this
 
-Decide, in order: the pair as a unit kind (yes/no); C0DIFF open items 2
-to 4; then rewrite `DIFF.md` and `GRAMMAR.md`, regenerate vectors, port
-Crystal first. Markup islands and supersession are separate decisions and
-can follow 1.0.
+Decide, in order: the pair as a unit kind with mandatory sides (yes/no);
+C0DIFF open items 2 to 4; then rewrite `DIFF.md` and `GRAMMAR.md`,
+regenerate vectors, port Crystal first. Markup islands are a separate
+decision and can follow 1.0. Supersession is exploratory and needs an
+addressing form before it is a proposal.
