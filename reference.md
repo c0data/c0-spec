@@ -99,6 +99,12 @@ The wire/storage format: a continuous byte stream with no layout.
 ␖␜mydb␝users␁␞name␟amount␞Alice Smith␟1502.30␞Bob␟340.00␄
 ```
 
+A document is bytes, not a string. Carry it and parse it as bytes: some
+string routines treat FS, GS and RS as line breaks (Python's
+`str.splitlines()`, following Unicode's paragraph-separator class), so
+decoding a document to a string and splitting it into lines can cut it
+at record boundaries.
+
 ### Pretty Form (Human-Readable)
 
 Unicode Control Pictures (U+2400 block) for the codes, line breaks and
