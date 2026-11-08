@@ -32,10 +32,13 @@ a 0.x minor may break, which is what happened. `v1.0.0` is reserved for
 after the C0DIFF review. The registry name is `c0data` everywhere
 (decided 2026-11-07; `c0` is taken on npm); the 0.x.1 tags carry the
 rename, a LICENSE in each, and the Python `MANIFEST.in` without which the
-sdist could not build. Each package was dry-run locally (npm pack, cargo
-publish --dry-run, sdist installed from the tarball, gem build). Not yet
-uploaded: npm and PyPI need a login on the publishing machine. Crystal
-shards and Go modules resolve from the tags directly. Python and Ruby
+sdist could not build. **Published 2026-11-08:** npm `c0data@0.4.1`,
+crates.io `c0data 0.3.1` (docs.rs builds it), RubyGems `c0data 0.3.1`;
+Go `v0.3.0` is in the module proxy. **Not yet:** PyPI (needs an API
+token on the publishing machine; the checked sdist is a one-line `twine
+upload`). Owner on every registry is the author's own account; an
+OpenBohemians identity can be added as co-owner later without
+republishing. Crystal shards and Go modules resolve from the tags. Python and Ruby
 report the C core's version (`0.2.0`) as `VERSION` and their own as the
 package version.
 
@@ -91,10 +94,11 @@ package version.
    diff. Affects DIFF.md, GRAMMAR.md, 32 diff vectors, and the diff
    modules of Crystal, JS, Rust, Go and C. The name drops its hyphen:
    C0DIFF.
-2. **Tags and releases.** Publish the 0.x.1 packages as `c0data` (npm
-   login and a PyPI token needed; crates.io and RubyGems credentials exist
-   on the author's machine). Tag `v1.0.0` across all repos after the
-   C0DIFF review. No publish workflows exist yet (CI only tests).
+2. **Tags and releases.** PyPI upload of `c0data 0.3.1` still to do.
+   Tag `v1.0.0` across all repos after the C0DIFF review. No publish
+   workflows exist yet (CI only tests); npm now requires 2FA or a
+   bypass token to publish, which a trusted-publisher workflow would
+   avoid.
 3. **Cosmetic, Crystal Pretty:** continues a record on the line of a
    closing `␘`; groups are not indented under `␜` as the DESIGN example
    shows.
