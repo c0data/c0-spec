@@ -17,7 +17,7 @@ language ports. Everything below is on `main`, pushed, with green tests.
 | c0-rs | v0.3.1 | `a500ffe` | 51 tests; crate `c0data`, library `c0` |
 | c0-go | v0.3.0 | `7fe8fbb` | gofmt, vet, tests clean |
 | c0-c | v0.2.0 | `ae395b9` | zero warnings under `-Wall -Wextra -Wpedantic`, ASan/UBSan clean |
-| c0-py | v0.3.1 | `8c84e30` | 31 tests; binds c0-c v0.2.0; PyPI name `c0data`, import `c0` |
+| c0-py | v0.3.2 | `e707e4f` | 31 tests; binds c0-c v0.2.0; PyPI name `c0data-py`, import `c0` |
 | c0-rb | v0.3.1 | `9cc7f7b` | 202 runs; binds c0-c v0.2.0; gem `c0data`, require `c0` |
 | c0-fmt (CLI) | v0.12.0 | `ced1624` | lockstep with c0-cr; shard.lock pins c0 0.12.0 |
 | c0-ed (editor) | v0.3.0 | `f276cec` | VS Code extension built, not yet installed or tried |
@@ -34,9 +34,11 @@ after the C0DIFF review. The registry name is `c0data` everywhere
 rename, a LICENSE in each, and the Python `MANIFEST.in` without which the
 sdist could not build. **Published 2026-11-08:** npm `c0data@0.4.1`,
 crates.io `c0data 0.3.1` (docs.rs builds it), RubyGems `c0data 0.3.1`;
-Go `v0.3.0` is in the module proxy. **Not yet:** PyPI (needs an API
-token on the publishing machine; the checked sdist is a one-line `twine
-upload`). Owner on every registry is the author's own account; an
+Go `v0.3.0` is in the module proxy; PyPI `c0data-py 0.3.2` (PyPI refuses
+`c0data` as a look-alike of `codata`, 0 and o being confusable in its
+check), uploaded by `c0-py/.github/workflows/publish.yml` through PyPI
+trusted publishing on a `v*` tag, so no token exists anywhere. Owner on
+every registry is the author's own account; an
 OpenBohemians identity can be added as co-owner later without
 republishing. Crystal shards and Go modules resolve from the tags. Python and Ruby
 report the C core's version (`0.2.0`) as `VERSION` and their own as the
@@ -94,11 +96,12 @@ package version.
    diff. Affects DIFF.md, GRAMMAR.md, 32 diff vectors, and the diff
    modules of Crystal, JS, Rust, Go and C. The name drops its hyphen:
    C0DIFF.
-2. **Tags and releases.** PyPI upload of `c0data 0.3.1` still to do.
-   Tag `v1.0.0` across all repos after the C0DIFF review. No publish
-   workflows exist yet (CI only tests); npm now requires 2FA or a
-   bypass token to publish, which a trusted-publisher workflow would
-   avoid.
+2. **Tags and releases.** All four registries done. Tag `v1.0.0` across
+   all repos after the C0DIFF review. Only c0-py has a publish workflow;
+   npm, crates.io and RubyGems were published by hand (npm needs 2FA or
+   a bypass token, which a trusted-publisher workflow would avoid next
+   time). Python ships an sdist only; wheels via cibuildwheel are a
+   possible later addition.
 3. **Cosmetic, Crystal Pretty:** continues a record on the line of a
    closing `␘`; groups are not indented under `␜` as the DESIGN example
    shows.
