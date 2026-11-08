@@ -11,7 +11,8 @@ validate-then-write, atomicity) are kept word for word.
 
 ## The premise
 
-In ASCII (1963) SUB is *Substitute*: a receiver that found a garbled
+In ASCII SUB is *Substitute* (named in the 1967 revision; the 1963 chart
+had only a numbered separator at 0x1A): a receiver that found a garbled
 character wrote SUB in its place, so the record kept its length and the
 fault stayed visible where it occurred. SUB never pointed somewhere else.
 It sat on the spot.
