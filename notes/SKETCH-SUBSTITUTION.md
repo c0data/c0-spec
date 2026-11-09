@@ -7,7 +7,7 @@ proposals this one discards, is in git history (`d02ca9b`).
 **Decided 2026-11-08:** the pair is defined once, in the base grammar
 (`GRAMMAR.md`, `DESIGN.md`); the two uses are separate specifications.
 **C0DIFF** (`DIFF.md`) is the text diff, a document shape that finds its
-place by matching; it gates 1.0. **C0MARK** (`MARK.md`, to be written) is
+place by matching; it gates 1.0. **C0MARK** (`MARK.md`, preliminary draft 2026-11-08) is
 editorial marks inside a document, position-anchored, and is a 1.x
 proposal that does not gate 1.0. Both use the pair with the same spelling
 and the same empty side, which is why the pair lives in neither.
@@ -132,8 +132,8 @@ shape does.
 
 ## C0MARK: marks in a document
 
-Named 2026-11-08: **C0MARK**, spec `MARK.md` when written; this section is
-its seed. Editor's marks, as in proofreading: insertion, deletion,
+Named 2026-11-08: **C0MARK**, proposal in `MARK.md` (written from this
+section the same day; `MARK.md` is now the fuller text). Editor's marks, as in proofreading: insertion, deletion,
 substitution, comment. Not search and replace. An editor marks a document
 in place; position is the anchor. Separate specification; does not gate
 C0DIFF or 1.0.
@@ -259,6 +259,6 @@ model and need their own vectors; neither is needed for C0DIFF.
 Decide, in order: the pair as a unit kind with mandatory sides (yes/no);
 C0DIFF open items 2 to 4; then rewrite `DIFF.md` and `GRAMMAR.md`,
 regenerate vectors, port Crystal first. C0MARK is a separate
-specification (`MARK.md`) and follows 1.0; its seed is the section above.
+specification (`MARK.md`, proposal drafted) and follows 1.0.
 Supersession is exploratory and needs an addressing form before it is a
 proposal.

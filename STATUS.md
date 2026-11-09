@@ -90,7 +90,7 @@ package version.
    units are anchors and whose pairs are substitutions; the semantics of
    DIFF.md carry over unchanged. Decided 2026-11-08: the pair is defined
    in the base grammar, and its two uses are separate specifications,
-   C0DIFF (`DIFF.md`, gates 1.0) and **C0MARK** (`MARK.md`, to be written:
+   C0DIFF (`DIFF.md`, gates 1.0) and **C0MARK** (`MARK.md`, preliminary draft written 2026-11-08:
    editor's marks inside a document, islands as a level inside text,
    position-anchored; a 1.x proposal that does not gate 1.0). Supersession
    (`SUB` before FS/GS/RS replaces the previous sibling) stays

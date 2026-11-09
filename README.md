@@ -13,6 +13,8 @@ depends on.
   canonical constraints.
 - `DIFF.md` — the C0-DIFF profile: anchored patterns, replace-all,
   atomicity.
+- `MARK.md` — the C0MARK proposal (1.x, not normative): editor's marks in
+  a document, pairs on units and islands inside text.
 - `reference.md` — the technical reference (format overview, control codes,
   data shapes, escaping, `c0fmt` usage).
 - `vectors/*.json` — the conformance fixtures (decode, encode, canonical,
