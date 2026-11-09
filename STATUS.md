@@ -88,12 +88,15 @@ package version.
    in `notes/SKETCH-SUBSTITUTION.md`: the pair `old␚new` becomes a unit
    kind of the base grammar, and a diff is files of records whose plain
    units are anchors and whose pairs are substitutions; the semantics of
-   DIFF.md carry over unchanged. Two separate proposals ride alongside and
-   do not gate 1.0: islands (a level inside text) for editor markup, and
-   supersession (`SUB` before FS/GS/RS replaces the previous sibling) for
-   data and logs. **Undecided:** the pair as grammar (yes/no), replace-all
-   (constraints stated, no mark), where uniqueness is measured, GS in a
-   diff. Affects DIFF.md, GRAMMAR.md, 32 diff vectors, and the diff
+   DIFF.md carry over unchanged. Decided 2026-11-08: the pair is defined
+   in the base grammar, and its two uses are separate specifications,
+   C0DIFF (`DIFF.md`, gates 1.0) and **C0MARK** (`MARK.md`, to be written:
+   editor's marks inside a document, islands as a level inside text,
+   position-anchored; a 1.x proposal that does not gate 1.0). Supersession
+   (`SUB` before FS/GS/RS replaces the previous sibling) stays
+   exploratory. The shape name stays `diff`. **Undecided:** the pair as
+   grammar (yes/no), replace-all (constraints stated, no mark), where
+   uniqueness is measured, GS in a diff. Affects DIFF.md, GRAMMAR.md, 32 diff vectors, and the diff
    modules of Crystal, JS, Rust, Go and C. The name drops its hyphen:
    C0DIFF.
 2. **Tags and releases.** All four registries done. Tag `v1.0.0` across

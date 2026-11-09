@@ -4,6 +4,14 @@
 nothing is normative, nothing is built. The 2026-11-06 text, with the
 proposals this one discards, is in git history (`d02ca9b`).
 
+**Decided 2026-11-08:** the pair is defined once, in the base grammar
+(`GRAMMAR.md`, `DESIGN.md`); the two uses are separate specifications.
+**C0DIFF** (`DIFF.md`) is the text diff, a document shape that finds its
+place by matching; it gates 1.0. **C0MARK** (`MARK.md`, to be written) is
+editorial marks inside a document, position-anchored, and is a 1.x
+proposal that does not gate 1.0. Both use the pair with the same spelling
+and the same empty side, which is why the pair lives in neither.
+
 **Replaces, if adopted:** the `diff-body` grammar in `GRAMMAR.md` and the
 Structure section of `DIFF.md`. The semantics of `DIFF.md` (search text,
 exact-once match, cursor, insertion, deletion, assertion,
@@ -119,13 +127,16 @@ shape does.
    practical but needs the next boundary matched first. Lean: keep
    `DIFF.md`'s rule for 1.0.
 3. **GS in a diff:** forbidden, or an inert label.
-4. **Shape name.** `diff` names one use; markup is the other. Lean: keep
-   `diff`, it is what people look for.
+4. **Shape name.** Decided 2026-11-08: `diff`. Marks (C0MARK) are not a
+   shape; they sit inside text in any document.
 
-## Markup in a document
+## C0MARK: marks in a document
 
-Not search and replace. An editor marks a document in place; position is
-the anchor. Separate proposal; does not gate C0DIFF.
+Named 2026-11-08: **C0MARK**, spec `MARK.md` when written; this section is
+its seed. Editor's marks, as in proofreading: insertion, deletion,
+substitution, comment. Not search and replace. An editor marks a document
+in place; position is the anchor. Separate specification; does not gate
+C0DIFF or 1.0.
 
 A whole-unit mark is a pair in the record:
 
@@ -147,7 +158,7 @@ for attribution; two records for two proposed readings; an island inside
 a pair-right for a reply to a mark.
 
 Three readings: *original* takes every pair's left, *clean* its right,
-*marked* shows both with the notes. Marks are content, hashed and
+*marked* shows both with the notes (the marked copy, as in proofreading). Marks are content, hashed and
 canonical; the editor's hand is part of the record. Deleting a paragraph
 already exists: bare BEL before RS.
 
@@ -163,6 +174,13 @@ DLE-opened levels inside it, and an unescaped STX may appear inside an
 island inside text. A document without islands scans exactly as before.
 Run-split (cutting the paragraph into units at each mark) was considered
 and ruled out: a US in a block is a list item in the document shape.
+
+**Compatibility, if adopted after 1.0:** under 1.0's text rule, DLE
+followed by anything but the seven escaped codes is an error, so every
+valid 1.0 document stays valid under C0MARK, and a 1.0 reader rejects a
+marked document cleanly instead of misreading it. The heading's version
+key says which rule applies. Whole-unit marks (a pair in a record) need
+no new grammar at all and are legal the moment the pair is.
 
 ## Data: supersession (exploratory)
 
@@ -215,7 +233,7 @@ key name `match` should be reserved now.
 ## Use cases
 
 - **Code patch:** C0DIFF, what `DIFF.md` was written for.
-- **Editor markup:** pairs and islands in a document.
+- **Editor's marks:** C0MARK, pairs and islands in a document.
 - **Log correction:** supersession after a commit (exploratory).
 
 ## Discarded on the way
@@ -232,14 +250,15 @@ C0DIFF: `Diff.parse`/`apply` read records instead of GS lines; the diff
 branch leaves the validator; `vectors/diff.json` (32 cases) regenerated;
 grammar vectors for the pair. Ports with diff: Crystal, JavaScript, Rust,
 Go, C. The pair as a unit kind touches every port's tokenizer/model
-lightly (SUB outside text splits a unit). Islands and supersession, if
-and when adopted, touch every port's parser and Document model and need
-their own vectors; neither is needed for C0DIFF.
+lightly (SUB outside text splits a unit). C0MARK islands and
+supersession, if and when adopted, touch every port's parser and Document
+model and need their own vectors; neither is needed for C0DIFF.
 
 ## How to resume this
 
 Decide, in order: the pair as a unit kind with mandatory sides (yes/no);
 C0DIFF open items 2 to 4; then rewrite `DIFF.md` and `GRAMMAR.md`,
-regenerate vectors, port Crystal first. Markup islands are a separate
-decision and can follow 1.0. Supersession is exploratory and needs an
-addressing form before it is a proposal.
+regenerate vectors, port Crystal first. C0MARK is a separate
+specification (`MARK.md`) and follows 1.0; its seed is the section above.
+Supersession is exploratory and needs an addressing form before it is a
+proposal.
