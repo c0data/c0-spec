@@ -7,7 +7,7 @@
       "files": {
         "greeting.txt": "Hello world!"
       },
-      "diff": "160173686170651f646966661c6772656574696e672e7478741d0248656c6c6f20031f776f726c641a756e6976657273651f2104",
+      "diff": "160173686170651f646966661c6772656574696e672e7478741e0248656c6c6f20031f776f726c641a1f756e6976657273651f2104",
       "result": {
         "greeting.txt": "Hello universe!"
       }
@@ -18,62 +18,62 @@
       "files": {
         "app.rb": "class App\n  def run\n  end\nend\n"
       },
-      "diff": "160173686170651f646966661c6170702e72621d02636c617373204170700a202064656620031f72756e1a737461727404",
+      "diff": "160173686170651f646966661c6170702e72621e02636c617373204170700a202064656620031f72756e1a1f737461727404",
       "result": {
         "app.rb": "class App\n  def start\n  end\nend\n"
       }
     },
     {
       "name": "two-substitutions",
-      "desc": "Several substitutions in one pattern",
+      "desc": "Several substitutions in one record",
       "files": {
         "m.txt": "x = 10 + 5\n"
       },
-      "diff": "160173686170651f646966661c6d2e7478741d0278203d20031f31301a32301f02202b20031f351a313504",
+      "diff": "160173686170651f646966661c6d2e7478741e0278203d20031f31301a1f32301f02202b20031f351a1f313504",
       "result": {
         "m.txt": "x = 20 + 15\n"
       }
     },
     {
       "name": "insertion",
-      "desc": "An empty old part inserts",
+      "desc": "An empty old inserts after its anchor",
       "files": {
         "a.py": "import os\nprint(1)\n"
       },
-      "diff": "160173686170651f646966661c612e70791d02696d706f7274206f73031f1a020a696d706f7274207379730304",
+      "diff": "160173686170651f646966661c612e70791e02696d706f7274206f73031f1a1f020a696d706f7274207379730304",
       "result": {
         "a.py": "import os\nimport sys\nprint(1)\n"
       }
     },
     {
       "name": "deletion",
-      "desc": "An empty new part deletes",
+      "desc": "An empty new deletes",
       "files": {
         "a.txt": "keep # TODO remove\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d02202320544f444f2072656d6f7665031a04",
+      "diff": "160173686170651f646966661c612e7478741e02202320544f444f2072656d6f7665031a1f04",
       "result": {
         "a.txt": "keep\n"
       }
     },
     {
       "name": "assertion",
-      "desc": "A section with no substitution asserts and moves the cursor",
+      "desc": "A record with no substitution asserts and moves the cursor",
       "files": {
         "a.txt": "one\ntwo\none\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d74776f1d6f6e651a756e6f04",
+      "diff": "160173686170651f646966661c612e7478741e74776f1e6f6e651a1f756e6f04",
       "result": {
         "a.txt": "one\ntwo\nuno\n"
       }
     },
     {
-      "name": "sequential-sections",
-      "desc": "Each section is searched after the previous match, so a later 'a' is unambiguous",
+      "name": "sequential-records",
+      "desc": "Each record is searched after the previous match, so a later 'a' is unambiguous",
       "files": {
         "a.txt": "a b\na c\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d02612062031a581d611a5a04",
+      "diff": "160173686170651f646966661c612e7478741e02612062031a1f581e611a1f5a04",
       "result": {
         "a.txt": "X\nZ c\n"
       }
@@ -84,7 +84,7 @@
       "files": {
         "a.txt": "a b a b\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d611a4104",
+      "diff": "160173686170651f646966661c612e7478741e611a1f4104",
       "error": true
     },
     {
@@ -93,7 +93,7 @@
       "files": {
         "c.cr": "def run\n  return 0\nend\n"
       },
-      "diff": "160173686170651f646966661c632e63721d0220206465662072756e0a031f02202072657475726e2030031a02202072657475726e20310304",
+      "diff": "160173686170651f646966661c632e63721e0220206465662072756e0a031f02202072657475726e2030031a1f02202072657475726e20310304",
       "error": true
     },
     {
@@ -102,53 +102,20 @@
       "files": {
         "c.cr": "def run\n  return 0\nend\n"
       },
-      "diff": "160173686170651f646966661c632e63721d026465662072756e0a031f02202072657475726e2030031a02202072657475726e20310304",
+      "diff": "160173686170651f646966661c632e63721e026465662072756e0a031f02202072657475726e2030031a1f02202072657475726e20310304",
       "result": {
         "c.cr": "def run\n  return 1\nend\n"
       }
     },
     {
-      "name": "replace-all-in-scope",
-      "desc": "RS replaces every occurrence between this section's match and the next",
+      "name": "expanded-replace-all",
+      "desc": "Replace-all is written out: one anchored record per occurrence, in order",
       "files": {
         "t.rb": "count = 0\ndef tally(items)\n  count = 0\n  items.each { count += 1 }\n  count\nend\ncount\n"
       },
-      "diff": "160173686170651f646966661c742e72621d6465662074616c6c79286974656d73291e636f756e741a746f74616c1d656e6404",
+      "diff": "160173686170651f646966661c742e72621e6465662074616c6c79286974656d73291e022020031f636f756e741a1f746f74616c1f02203d2030031e027b20031f636f756e741a1f746f74616c1f02202b3d031e022020031f636f756e741a1f746f74616c1f020a656e640304",
       "result": {
         "t.rb": "count = 0\ndef tally(items)\n  total = 0\n  items.each { total += 1 }\n  total\nend\ncount\n"
-      }
-    },
-    {
-      "name": "replace-all-to-eof",
-      "desc": "After the last section the scope runs to the end of the file",
-      "files": {
-        "a.txt": "x\n--\nx x\n"
-      },
-      "diff": "160173686170651f646966661c612e7478741d2d2d1e781a7904",
-      "result": {
-        "a.txt": "x\n--\ny y\n"
-      }
-    },
-    {
-      "name": "replace-all-whole-file",
-      "desc": "RS before any section applies to the whole file (up to the first match)",
-      "files": {
-        "a.txt": "x x\n--\nx\n"
-      },
-      "diff": "160173686170651f646966661c612e7478741e781a791d2d2d04",
-      "result": {
-        "a.txt": "y y\n--\nx\n"
-      }
-    },
-    {
-      "name": "replace-all-in-order",
-      "desc": "Several RS lines apply in order",
-      "files": {
-        "a.txt": "--\na a\n"
-      },
-      "diff": "160173686170651f646966661c612e7478741d2d2d1e611a621e621a6304",
-      "result": {
-        "a.txt": "--\nc c\n"
       }
     },
     {
@@ -158,19 +125,30 @@
         "a.txt": "foo\n",
         "b.txt": "bar\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d666f6f1a464f4f1c622e7478741d6261721a42415204",
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1f464f4f1c622e7478741e6261721a1f42415204",
       "result": {
         "a.txt": "FOO\n",
         "b.txt": "BAR\n"
       }
     },
     {
-      "name": "note-and-dead-section",
-      "desc": "A note is skipped; a dead section is parsed and ignored",
+      "name": "note-between-records",
+      "desc": "A note between records is skipped",
       "files": {
         "a.txt": "foo bar\n"
       },
-      "diff": "160173686170651f646966661c612e74787407206361726566756c1d666f6f1a464f4f071d6261721a42415204",
+      "diff": "160173686170651f646966661c612e74787407206361726566756c1e666f6f1a1f464f4f04",
+      "result": {
+        "a.txt": "FOO bar\n"
+      }
+    },
+    {
+      "name": "note-holds-hunk",
+      "desc": "A hunk kept without applying is written inside a text note",
+      "files": {
+        "a.txt": "foo bar\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1f464f4f07021e6261721a1f4241520304",
       "result": {
         "a.txt": "FOO bar\n"
       }
@@ -182,7 +160,7 @@
         "a.txt": "foo\n",
         "b.txt": "bar\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d666f6f1a464f4f1c622e7478741d62617a1a42415a04",
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1f464f4f1c622e7478741e62617a1a1f42415a04",
       "error": true
     },
     {
@@ -191,25 +169,34 @@
       "files": {
         "a.txt": "foo foo\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d666f6f1a464f4f04",
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1f464f4f04",
       "error": true
     },
     {
-      "name": "replace-all-nothing",
-      "desc": "A replace-all with zero occurrences refuses",
-      "files": {
-        "a.txt": "--\nfoo\n"
-      },
-      "diff": "160173686170651f646966661c612e7478741d2d2d1e6261721a62617a04",
-      "error": true
-    },
-    {
-      "name": "replace-all-empty-old",
-      "desc": "A replace-all needs a non-empty old part",
+      "name": "bare-insertion",
+      "desc": "An insertion needs an anchor: empty search text refuses",
       "files": {
         "a.txt": "--\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d2d2d1e1a7804",
+      "diff": "160173686170651f646966661c612e7478741e1a1f7804",
+      "error": true
+    },
+    {
+      "name": "empty-record",
+      "desc": "An empty record has empty search text and refuses",
+      "files": {
+        "a.txt": "--\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741e04",
+      "error": true
+    },
+    {
+      "name": "empty-substitution",
+      "desc": "A substitution of nothing by nothing refuses",
+      "files": {
+        "a.txt": "ab\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741e611f1a1f1f6204",
       "error": true
     },
     {
@@ -218,38 +205,34 @@
       "files": {
         "a.txt": "foo\n"
       },
-      "diff": "160173686170651f73747265616d1c612e7478741d666f6f1a62617204",
+      "diff": "160173686170651f73747265616d1c612e7478741e666f6f1a1f62617204",
       "error": true
     },
     {
-      "name": "dead-file-line",
-      "desc": "A dead FS kills only the path line; what follows attaches to the previous file",
+      "name": "dead-record-refused",
+      "desc": "A dead record is an error in a diff: what is written applies",
+      "files": {
+        "a.txt": "foo bar\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1f464f4f071e6261721a1f42415204",
+      "error": true
+    },
+    {
+      "name": "dead-file-line-refused",
+      "desc": "A dead file line is an error in a diff",
       "files": {
         "a.txt": "foo baz\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d666f6f1a464f4f071c622e7478741d62617a1a42415a04",
-      "result": {
-        "a.txt": "FOO BAZ\n"
-      }
-    },
-    {
-      "name": "dead-section-replace-attaches",
-      "desc": "RS lines after a dead GS attach to the previous live section",
-      "files": {
-        "a.txt": "A x\nC x\n"
-      },
-      "diff": "160173686170651f646966661c612e7478741d41071d431e781a7904",
-      "result": {
-        "a.txt": "A y\nC y\n"
-      }
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1f464f4f071c622e7478741e62617a1a1f42415a04",
+      "error": true
     },
     {
       "name": "text-note-in-body",
-      "desc": "A text note between lines is skipped",
+      "desc": "A text note between records is skipped",
       "files": {
         "a.txt": "foo\n"
       },
-      "diff": "160173686170651f646966661c612e74787407026e6f7465201e207769746820636f646573031d666f6f1a62617204",
+      "diff": "160173686170651f646966661c612e74787407026e6f7465201e207769746820636f646573031e666f6f1a1f62617204",
       "result": {
         "a.txt": "bar\n"
       }
@@ -260,18 +243,29 @@
       "files": {
         "a.txt": "ab\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d61076e1f621a6304",
+      "diff": "160173686170651f646966661c612e7478741e61076e1f621a1f6304",
+      "result": {
+        "a.txt": "ac\n"
+      }
+    },
+    {
+      "name": "note-after-substitution",
+      "desc": "A note after a superseding unit is a note",
+      "files": {
+        "a.txt": "ab\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741e611f621a1f63076e04",
       "result": {
         "a.txt": "ac\n"
       }
     },
     {
       "name": "commit-tolerated",
-      "desc": "An ETB between lines is a no-op",
+      "desc": "An ETB between records is a no-op",
       "files": {
         "a.txt": "foo\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d666f6f1a6261721704",
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1f6261721704",
       "result": {
         "a.txt": "bar\n"
       }
@@ -282,7 +276,7 @@
       "files": {
         "a.txt": "aaa\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d61611a6204",
+      "diff": "160173686170651f646966661c612e7478741e61611a1f6204",
       "error": true
     },
     {
@@ -291,7 +285,7 @@
       "files": {
         "a.txt": "foo bar\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d666f6f1a464f4f1c612e7478741d6261721a42415204",
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1f464f4f1c612e7478741e6261721a1f42415204",
       "error": true
     },
     {
@@ -300,7 +294,7 @@
       "files": {
         "a.txt": "foo bar\n"
       },
-      "diff": "160173686170651f646966661c612e7478741d666f6f1a464f4f041d6261721a424152",
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1f464f4f041e6261721a1f424152",
       "error": true
     },
     {
@@ -309,7 +303,16 @@
       "files": {
         "a.txt": "foo\n"
       },
-      "diff": "160173686170651f646966661c02612e747874031d666f6f1a62617204",
+      "diff": "160173686170651f646966661c02612e747874031e666f6f1a1f62617204",
+      "error": true
+    },
+    {
+      "name": "empty-path",
+      "desc": "A path is never empty",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c1e666f6f1a1f62617204",
       "error": true
     },
     {
@@ -318,7 +321,7 @@
       "files": {
         "a.txt": "foo\n"
       },
-      "diff": "160173686170651f646966660701781f791c612e7478741d666f6f1a62617204",
+      "diff": "160173686170651f646966660701781f791c612e7478741e666f6f1a1f62617204",
       "result": {
         "a.txt": "bar\n"
       }
@@ -329,7 +332,79 @@
       "files": {
         "a.txt": "foo\n"
       },
-      "diff": "160173686170651f646966661c622e7478741d666f6f1a62617204",
+      "diff": "160173686170651f646966661c622e7478741e666f6f1a1f62617204",
+      "error": true
+    },
+    {
+      "name": "record-before-file",
+      "desc": "A record before the first FS refuses",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661e666f6f1a1f6261721c612e74787404",
+      "error": true
+    },
+    {
+      "name": "gs-refused",
+      "desc": "GS has no meaning in a diff and refuses",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741d731e666f6f1a1f62617204",
+      "error": true
+    },
+    {
+      "name": "header-row-refused",
+      "desc": "A header row refuses",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c612e747874011e781e666f6f1a1f62617204",
+      "error": true
+    },
+    {
+      "name": "keyed-unit-refused",
+      "desc": "A keyed unit refuses",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741e016b1f666f6f1a016b1f62617204",
+      "error": true
+    },
+    {
+      "name": "level-refused",
+      "desc": "A level refuses",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741e101e666f6f181a1f62617204",
+      "error": true
+    },
+    {
+      "name": "reference-refused",
+      "desc": "A reference refuses",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741e05666f6f1a1f62617204",
+      "error": true
+    },
+    {
+      "name": "chained-supersession-refused",
+      "desc": "A chained supersession refuses: the file never held the middle",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1f6261721a1f62617a04",
+      "error": true
+    },
+    {
+      "name": "record-grain-refused",
+      "desc": "Supersession at the record grain is reserved and refuses",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1e62617204",
       "error": true
     }
   ]

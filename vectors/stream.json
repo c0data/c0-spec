@@ -90,6 +90,94 @@
       ]
     },
     {
+      "name": "malformed-block-damaged",
+      "desc": "Any error inside a committed block damages that block alone; its bounds come from the ETB",
+      "bytes": "1e61171e621f070574616773171e6317",
+      "committed_end": 16,
+      "torn": false,
+      "blocks": [
+        "1e61",
+        "1e621f070574616773",
+        "1e63"
+      ],
+      "records": [
+        [
+          "a"
+        ],
+        [
+          "c"
+        ]
+      ],
+      "damaged": [
+        1
+      ]
+    },
+    {
+      "name": "late-header-row-damaged",
+      "desc": "A header row after records is an error, so its block is damaged",
+      "bytes": "1e6117011e78171e6217",
+      "committed_end": 10,
+      "torn": false,
+      "blocks": [
+        "1e61",
+        "011e78",
+        "1e62"
+      ],
+      "records": [
+        [
+          "a"
+        ],
+        [
+          "b"
+        ]
+      ],
+      "damaged": [
+        1
+      ]
+    },
+    {
+      "name": "batch-block-damaged",
+      "desc": "A batch with one bad record is one damaged block: its sound records are not delivered",
+      "bytes": "1e611e621f070574171e6317",
+      "committed_end": 12,
+      "torn": false,
+      "blocks": [
+        "1e611e621f070574",
+        "1e63"
+      ],
+      "records": [
+        [
+          "c"
+        ]
+      ],
+      "damaged": [
+        0
+      ]
+    },
+    {
+      "name": "payload-then-text-damaged",
+      "desc": "What follows a payload begins the next block; text with no record there is an error, so that block is damaged",
+      "bytes": "1e611770027803171e6217",
+      "committed_end": 11,
+      "torn": false,
+      "blocks": [
+        "1e61",
+        "027803",
+        "1e62"
+      ],
+      "records": [
+        [
+          "a"
+        ],
+        [
+          "b"
+        ]
+      ],
+      "damaged": [
+        1
+      ]
+    },
+    {
       "name": "heading-committed",
       "desc": "The SYN heading is committed with the first ETB like anything else",
       "bytes": "160173686170651f73747265616d171e6117",

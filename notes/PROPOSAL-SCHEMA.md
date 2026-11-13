@@ -236,6 +236,12 @@ of JSON (~580 bytes). The C0 schema is ~24 lines (~210 bytes compact).
 
 1. **Schema versioning** — How should schema evolution be handled?
    Version field? Multiple schema groups with version suffixes?
+   *2026-11-11:* a document names its schema in the heading under the
+   `schema` key (DESIGN.md, Documents): a plain name, or a keyed record
+   of `name`, `url` (versioned by the publisher) and `hash` (`sha256:` of
+   the schema's canonical body); the hash pins it, so a published schema
+   cannot change under a document. Resolution and the mismatch refusal are
+   this layer's.
 
 2. **Strict mode** — Should there be an equivalent of JSON Schema's
    `additionalProperties: false`? A constraint like `strict␟true`

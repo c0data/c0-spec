@@ -1,6 +1,6 @@
 # Project Status
 
-**As of 2026-11-06.** This file exists so the project can be picked up
+**As of 2026-11-12.** This file exists so the project can be picked up
 cold, by anyone, after any length of pause. It says where every repository
 stands, what is decided, what is open, and in what order to resume.
 
@@ -59,11 +59,27 @@ package version.
 - SYN heading (shape, version, blob) … body … EOT. Missing SYN is a loud
   warning. EM begins a raw blob region declared in the first heading.
 - ETB commits a stream block.
-- References `ENQ name` or `ENQ STX a US b [US c] ETX`, every segment a
-  name, resolved in any order against the whole body; stream readers
-  resolve against committed blocks only. Hashed as written.
+- References `ENQ name` (a group) or `ENQ DLE … CAN`, a **pattern**: a
+  level that is the target with its values left out (`␅␐␝tags␞001␟label␘`;
+  file line, GS depth, `␞␁host␟` for a keyed unit, a level in the third
+  unit to continue into a field's level). Decided 2026-11-10; replaces the
+  US-separated text path, which is now an error. Resolution is
+  **nearest wins**: the closest matching target before the ENQ, else the
+  first after; stream readers resolve against committed blocks only.
+  Hashed as written.
+- **Supersession** (decided 2026-11-10, written 2026-11-12): SUB before
+  US, SOH, RS, GS or FS marks the element before as superseded by the one
+  after, at that grain (`old␚␟new`); legal everywhere the code is; content,
+  hashed as written; a document model reports the result. **C0DIFF** is a
+  body of records under constraints (`DIFF.md`): anchored patterns,
+  `old␚␟new` substitutions, every unused slot an error, no replace-all
+  mark, uniqueness to end of file, no diff grammar.
+- Heading keys `shape` (`diff` | `stream`), `version`, `blob`, and
+  `schema` (a name, or a keyed record of `name`, `url`, `hash`, the hash
+  of the schema's canonical body; decided 2026-11-11, the shape hints cut
+  the same day).
 - Canonical form: no layout, notes, dead elements or framing; one spelling
-  per value; unique keys. Canonical units (record, group, body) are
+  per value; unique keys. Canonical spans (record, group, body) are
   hashing helpers only; ordering is the producer's job.
 
 ## Library API decisions (not spec, but shared by all ports)
@@ -73,32 +89,103 @@ package version.
   follower, sharing record state with the composed methods (`group`,
   `header`, `record`, `field`, `map`, `key`, `level`, `list`, `ref`,
   `note`), all returning the builder. No `stx`/`etx` primitive: value
-  spelling is automatic so output stays canonical. `sub` is for C0DIFF
-  only. Rust and C spell the optional form as a suffix pair
+  spelling is automatic so output stays canonical. Bare `sub` writes
+  SUB before the next primitive (supersession); the pair convenience
+  `us("10").sub("20")` is withdrawn with the pair (2026-11-10). Rust and C spell the optional form as a suffix pair
   (`rs()`/`rs_value(v)`); Go uses variadics.
 - Go and Rust have no hash-taking `map`/`syn`; use `key`/`heading`
   chains, because their maps are unordered and key order is data.
 
 ## What is open
 
-1. **C0DIFF review.** The author wants to review the diff as a whole before
-   1.0 is tagged. It currently uses a second grammar (`diff-body`) with the
-   pattern on the GS line, which fails the framework rule that every shape
-   parses under the base grammar. The direction worked out (2026-11-07) is
-   in `notes/SKETCH-SUBSTITUTION.md`: the pair `old␚new` becomes a unit
-   kind of the base grammar, and a diff is files of records whose plain
-   units are anchors and whose pairs are substitutions; the semantics of
-   DIFF.md carry over unchanged. Decided 2026-11-08: the pair is defined
-   in the base grammar, and its two uses are separate specifications,
-   C0DIFF (`DIFF.md`, gates 1.0) and **C0MARK** (`MARK.md`, preliminary draft written 2026-11-08:
+1. **C0DIFF review: decided and written, 2026-11-12.** DIFF.md,
+   GRAMMAR.md and DESIGN.md are rewritten: no `diff-body`, supersession in
+   the base grammar, the diff a body under constraints; `vectors/diff.json`
+   regenerated (41 cases) with `supersede-*` decode, canonical and invalid
+   cases. **Every port is now behind the spec** and must: parse SUB as a
+   qualifier (tokenizer), report superseded elements and the result
+   (Document model), drop the diff grammar branch, rewrite the diff module
+   (Crystal, JS, Rust, Go, C), plus the earlier items below (dead elements
+   take contents, reference patterns, `schema` key, damaged blocks, header
+   row notes, null-name sections in the harness). Port Crystal first. The
+   history of the decision is in `notes/PROPOSAL-SUPERSESSION.md`. Two independent reviews were run
+   2026-11-09 (`notes/REVIEW-2026-11-09-C0DIFF.md`, `-FORMAT.md`) and
+   their decisions are being taken in order. Decided so far: 2026-11-08,
+   one mechanism in the base grammar, two separate specifications, C0DIFF
+   (`DIFF.md`, gates 1.0) and **C0MARK** (`MARK.md`, preliminary draft:
    editor's marks inside a document, islands as a level inside text,
-   position-anchored; a 1.x proposal that does not gate 1.0). Supersession
-   (`SUB` before FS/GS/RS replaces the previous sibling) stays
-   exploratory. The shape name stays `diff`. **Undecided:** the pair as
-   grammar (yes/no), replace-all (constraints stated, no mark), where
-   uniqueness is measured, GS in a diff. Affects DIFF.md, GRAMMAR.md, 32 diff vectors, and the diff
-   modules of Crystal, JS, Rust, Go and C. The name drops its hyphen:
-   C0DIFF.
+   position-anchored; 1.x, does not gate 1.0); shape name `diff`.
+   2026-11-09: the mechanism is legal everywhere, one meaning; "boundary"
+   dropped, a record with no substitution is an assertion. 2026-11-10:
+   the mechanism is **supersession**, SUB before a separator or opener
+   (`old␚␟new`; `␚␞`, `␚␝`, `␚␜`, `␚␁` at their grains), and the pair as
+   a unit kind (`old␚new`) is withdrawn; empty sides are empty units, no
+   `␂␃`. **Decided 2026-11-12:** the diff constraint list: every slot the
+   text diff does not use is an error (keyed unit, level, reference,
+   header row, GS, pre-FS record, empty path, chained or non-unit-grain
+   supersession, empty search text, bare insertion, `␟␚␟`, and dead
+   records or file lines, since a hunk that reads as live but does not
+   apply is a hazard in an instruction; a text note `␇␂␞…␃` keeps a hunk
+   without applying it); notes allowed. **Decided 2026-11-12:** no
+   replace-all mark, ever (a tool expands one into anchored records
+   against the target; the inverse diff is undo); uniqueness measured to
+   end of file; supersession is content, hashed as written. Format review: the four grammar fixes are applied
+   (2026-11-10: dead record as an item anywhere; a record is keyed only by
+   a keyed unit, live or dead; a canonicaliser never brings two GS
+   together; a keyed unit may be dead) with vectors `comment-note-only-
+   record` and `note-between-gs`. Decided 2026-11-10: **dead means the
+   element and everything it holds**: a dead group takes its header row,
+   records and subsections, a dead file its groups (reverses the
+   2026-10-05 label-only rule; a label alone is commented out as a text
+   note, `␇␂␝g␃`); a header row anywhere but first, live or dead, is an
+   error. Vectors `comment-dead-group*`, `comment-dead-file*`,
+   `comment-label-in-note`, `dead-header-row-mid-group`,
+   `two-header-rows`. **Every port still re-parents** and fails the
+   dead-group and dead-file decode vectors until ported. Decided
+   2026-11-10: **references are patterns** (`ENQ DLE … CAN`, above) with
+   nearest-wins resolution; the text path form is an error. Vectors
+   `reference-*` (nine decode, two canonical, thirteen invalid) and
+   `reference-plain`. **Every port's Reference type** (group / record /
+   field today) must become the parsed pattern level and accept ENQ DLE;
+   the port READMEs still show `␅␂tags␟001␃`. Decided 2026-11-10: a
+   header row names its own group's fields, subsections inherit nothing;
+   a skipped GS depth (`␝a␝␝␝c`) is reported as nothing, no implied
+   parent (both as the ports already behave). Vectors
+   `header-not-inherited`, `gs-depth-skipped`; the latter spells the
+   skipped depth as a section with `"name": null`, which every port's
+   conformance harness must learn to descend through. Decided 2026-11-11:
+   the `shape` hints `tabular`, `document`, `key-value` are **cut**
+   (`shape` is `diff` or `stream`; anything else is the loud warning) and a
+   **`schema` heading key** is added: a plain name, or a level holding
+   one keyed record of `name`, `url`, `hash` (`sha256:` of the schema's
+   canonical body), any subset, no other keys; the format checks the
+   form, a schema layer refuses on mismatch. Vectors `heading-schema-*`, `heading-keys` and
+   `heading-written` respelled. Ports: Crystal's `SHAPES` set shrinks to
+   two, the known-key check gains `schema` and its form check; the same
+   in every port that validates the heading. Decided 2026-11-11: **any
+   error inside a committed block damages the block** (one definition;
+   ETB cutting open text is one case); the reader determines every block
+   with offsets, delivers nothing from a damaged one, **stops there by
+   default** with an error naming the resume offset, and continues only
+   when the consumer asks. Vectors `malformed-block-damaged`,
+   `late-header-row-damaged`, `batch-block-damaged`. Ports: every stream
+   reader must catch errors per block instead of raising, and grow the
+   continue option. 2026-11-12, terminology pass (review finding 7):
+   "canonical span" for the hashed stretch, "severity" for warnings,
+   "depth" for GS repetition, "value" where plain-or-text was called
+   text, "record id" for a record's first field, "framing" defined once;
+   a unit holds at most one value. Editorial only. Same day, findings
+   12–15: lookahead note corrected (two codes, GS depth lookbehind); a
+   header row admits notes (`␁␞a␇n␟b`, grammar rule changed; Crystal
+   already accepts, **c0-py's validate rejects**); principles own their
+   DLE and BEL exceptions; group span ends at its own depth or shallower;
+   duplicate heading key = last wins, loud warning; STX/US after a payload
+   damages that block; SYN mid-stream tears as a torn tail; keyed blob
+   rows legal. Vectors `header-row-note`, `heading-duplicate-key`,
+   `payload-then-text-damaged`. **The format review is fully taken.**
+   Affects DIFF.md,
+   GRAMMAR.md, DESIGN.md, 32 diff vectors, and the diff modules of
+   Crystal, JS, Rust, Go and C. The name drops its hyphen: C0DIFF.
 2. **Tags and releases.** All four registries done. Tag `v1.0.0` across
    all repos after the C0DIFF review. Only c0-py has a publish workflow;
    npm, crates.io and RubyGems were published by hand (npm needs 2FA or
@@ -115,11 +202,10 @@ package version.
 
 ## How to resume
 
-1. Read DESIGN.md, then GRAMMAR.md, then DIFF.md, then
-   `notes/SKETCH-SUBSTITUTION.md`.
-2. Decide the C0DIFF questions above, constraints first.
-3. Update DIFF.md and GRAMMAR.md; regenerate vectors with `vectors/gen.py`;
-   port Crystal first (it is the reference), then the others, each
+1. Read DESIGN.md, then GRAMMAR.md, then DIFF.md; `notes/` is history.
+2. Commit the spec (everything since 434c06c is uncommitted as of
+   2026-11-12) and point the ports' submodules at it.
+3. Port Crystal first (it is the reference), then the others, each
    against the vectors; never hand-edit a vector.
 4. Tag `v1.0.0` everywhere, publish, update downstream.
 

@@ -23,10 +23,14 @@ output. Edit `gen.py`, run `python3 vectors/gen.py`, commit both.
   `{"level": {"headers": [...] | null, "records": [...]}}` for a nested
   level (DLE … CAN) holding records, `{"level": {"files": [...]}}` for one
   holding files and groups (same shape as a decode case's `files`), or
-  `{"ref": "group"}` / `{"ref": ["group", "record", "field"]}` for a
-  reference (ENQ).
+  `{"ref": "group"}` for a group reference (ENQ plain) or
+  `{"ref": {"level": ...}}` for a path (ENQ level), the pattern reported
+  as the level it is written as.
 - **Records** are a JSON array (positional) or `{"keys": [[k, v], ...]}`
-  (keyed, SOH units, in written order).
+  (keyed, SOH units, in written order). A record's units are the **result**
+  after supersession: a superseded unit (`old␚␟new`) is not listed, nor is
+  a superseded record, group, file or keyed unit; the cases under
+  `supersede-*` fix this.
 - **Headers** come from a header row, `SOH RS`.
 - A **heading** is `[[key, value], ...]` in written order; absent means no
   SYN.
@@ -57,7 +61,9 @@ Compact bytes → expected structure. Case shape:
 ```
 
 A group may carry `"sections": [...]`, its GS-repeated subsections, each
-of the same shape. When `files` or `documents` is present, `file` and
+of the same shape. A section with `"name": null` is a skipped depth: no
+group stands there and a reader reports none; the harness descends into
+its `sections` without expecting a group. When `files` or `documents` is present, `file` and
 `groups` describe the first file of the first document (and are empty
 when `documents` is given).
 
@@ -111,7 +117,8 @@ Bytes that MUST be rejected by a document reader: `{"name", "desc",
 "bytes"}` — parsing raises (unassigned code, DLE before the wrong byte
 inside or outside text, layout code inside a plain value, unbalanced
 text or level, framing inside open text or a level, a mixed record, a
-key without a value, a name written as text, SUB outside a diff, bytes
+key without a value, a name written as text, SUB before anything but a
+separator or opener or with nothing to supersede, bytes
 after EOT, BEL before a non-element). A stream reader reports the same
 shapes in an uncommitted tail as torn rather than as errors.
 
@@ -132,13 +139,17 @@ Stream-mode (ETB commit) semantics. Case shape:
 not torn), including a tail that leaves text or a level open or ends in a
 lone DLE. `blocks` — each committed
 block's bytes (previous commit to ETB, marker and payload excluded).
-An unescaped ETB is always a commit, inside text or a level too; a block
-so cut is listed in `damaged`. `records` (optional) — logical records of
-the committed region, headings and header rows excluded.
+An unescaped ETB is always a commit, inside text or a level too. A
+committed block that is not well-formed, whether cut by its ETB inside
+open text or holding any other error, is listed by index in `damaged`.
+`records` (optional) — logical records of the committed region, headings,
+header rows and damaged blocks excluded; a reader reports a damaged block
+and continues past it only when asked, which the harness does.
 
 ### diff.json
 
-C0-DIFF application (`DIFF.md`). Case shape:
+C0DIFF application (`DIFF.md`): a diff parses under the base grammar;
+these cases exercise its meaning and its constraint list. Case shape:
 
 ```json
 {"name": "...", "desc": "...",

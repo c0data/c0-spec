@@ -82,14 +82,64 @@
       "bytes": "1d671e31011e781e32"
     },
     {
+      "name": "dead-header-row-mid-group",
+      "desc": "A dead header row is parsed as if live, so out of place it is the same error",
+      "bytes": "1d671e3107011e781e32"
+    },
+    {
+      "name": "two-header-rows",
+      "desc": "A group has one header row",
+      "bytes": "1d67011e611e31011e621e32"
+    },
+    {
       "name": "us-after-keyed-value",
       "desc": "US after a keyed value is a mixed record",
       "bytes": "1e01611f311f32"
     },
     {
-      "name": "sub-outside-diff",
-      "desc": "SUB has no meaning outside a diff",
+      "name": "sub-before-value",
+      "desc": "SUB qualifies the separator after it; before a value it matches nothing",
       "bytes": "1e611a62"
+    },
+    {
+      "name": "sub-before-text",
+      "desc": "SUB before STX is an error",
+      "bytes": "1e611a026203"
+    },
+    {
+      "name": "sub-at-eof",
+      "desc": "SUB at the end of input has nothing to qualify",
+      "bytes": "1e611a"
+    },
+    {
+      "name": "sub-before-bel",
+      "desc": "SUB next to BEL is an error",
+      "bytes": "1e611f621a071e63"
+    },
+    {
+      "name": "bel-before-sub",
+      "desc": "BEL before SUB is an error: SUB is not an element",
+      "bytes": "1e61071a1f62"
+    },
+    {
+      "name": "sub-record-nothing-before",
+      "desc": "A record supersession needs a record before it in the group",
+      "bytes": "1d671a1e78"
+    },
+    {
+      "name": "sub-group-nothing-before",
+      "desc": "A group supersession needs an earlier group at that depth",
+      "bytes": "1a1d671e78"
+    },
+    {
+      "name": "sub-file-nothing-before",
+      "desc": "A file supersession needs an earlier file",
+      "bytes": "1a1c661e78"
+    },
+    {
+      "name": "sub-first-keyed-unit",
+      "desc": "The first keyed unit of a record has nothing to supersede",
+      "bytes": "1e1a016b1f76"
     },
     {
       "name": "bytes-after-eot",
@@ -97,14 +147,94 @@
       "bytes": "161e610478"
     },
     {
+      "name": "heading-schema-positional",
+      "desc": "A schema level holds a keyed record, not a positional one",
+      "bytes": "1601736368656d611f101e611f62181e78"
+    },
+    {
+      "name": "heading-schema-two-records",
+      "desc": "A schema level holds one record",
+      "bytes": "1601736368656d611f101e016e616d651f611e016e616d651f62181e78"
+    },
+    {
+      "name": "heading-schema-unknown-key",
+      "desc": "A schema record's keys are name, url and hash",
+      "bytes": "1601736368656d611f101e016e616d651f610176657273696f6e1f31181e78"
+    },
+    {
+      "name": "heading-schema-empty",
+      "desc": "schema needs a value",
+      "bytes": "1601736368656d611f1e78"
+    },
+    {
       "name": "reference-empty-name",
       "desc": "A reference needs a name",
       "bytes": "1e051f78"
     },
     {
-      "name": "reference-segment-not-name",
-      "desc": "Every path segment is a name: no edge whitespace, no control bytes",
-      "bytes": "1e0502611f206203"
+      "name": "reference-text",
+      "desc": "ENQ followed by text is an error: every step of a path is a plain name",
+      "bytes": "1e0502746167731f30303103"
+    },
+    {
+      "name": "reference-step-not-name",
+      "desc": "Every step of a pattern is a name: no edge whitespace, no control bytes",
+      "bytes": "1e05101d746167731e0220620318"
+    },
+    {
+      "name": "reference-empty-pattern",
+      "desc": "An empty level is not a reference",
+      "bytes": "1e051018"
+    },
+    {
+      "name": "reference-no-group",
+      "desc": "A pattern begins with a file or group line",
+      "bytes": "1e05101e30303118"
+    },
+    {
+      "name": "reference-two-records",
+      "desc": "A pattern is one branch: two records at one depth",
+      "bytes": "1e05101d746167731e3030311e30303218"
+    },
+    {
+      "name": "reference-two-groups",
+      "desc": "A pattern is one branch: two groups at one depth",
+      "bytes": "1e05101d611d6218"
+    },
+    {
+      "name": "reference-group-after-record",
+      "desc": "Nothing follows the record in a pattern",
+      "bytes": "1e05101d611e311d6218"
+    },
+    {
+      "name": "reference-four-units",
+      "desc": "A pattern record holds at most id, field name and a level",
+      "bytes": "1e05101d611e311f621f631f6418"
+    },
+    {
+      "name": "reference-third-unit-not-level",
+      "desc": "The third unit of a pattern record is a level",
+      "bytes": "1e05101d611e311f621f6318"
+    },
+    {
+      "name": "reference-keyed-with-value",
+      "desc": "A keyed unit in a pattern has no value",
+      "bytes": "1e05101d731e01686f73741f7818"
+    },
+    {
+      "name": "reference-two-keyed-units",
+      "desc": "A keyed record in a pattern holds one keyed unit",
+      "bytes": "1e05101d731e01611f01621f18"
+    },
+    {
+      "name": "reference-header-row",
+      "desc": "A header row is not a step",
+      "bytes": "1e05101d61011e781e3118"
+    },
+    {
+      "name": "reference-dead-step",
+      "desc": "A dead element is not a step",
+      "bytes": "1e05101d61071e3118"
     },
     {
       "name": "em-inside-level",

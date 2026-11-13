@@ -51,6 +51,13 @@
       "canonical": false
     },
     {
+      "name": "note-between-gs",
+      "desc": "A note between two GS: two groups at depth one, well-formed, not canonical; stripping the note would read as depth two, so a canonicaliser refuses rather than change depth",
+      "bytes": "1d076e1d621e78",
+      "wellformed": true,
+      "canonical": false
+    },
+    {
       "name": "keyed-unique",
       "desc": "Keyed record with unique keys",
       "bytes": "1e01611f3101621f32",
@@ -156,11 +163,32 @@
       "canonical": true
     },
     {
-      "name": "text-reference",
-      "desc": "A group reference written as text: not canonical",
-      "bytes": "1e05027461677303",
+      "name": "supersession-kept",
+      "desc": "Supersession is content: kept and canonical",
+      "bytes": "1e611a1f62",
+      "wellformed": true,
+      "canonical": true
+    },
+    {
+      "name": "supersession-side-spelling",
+      "desc": "Each side of a supersession is in its one spelling: text around plain is not canonical",
+      "bytes": "1e0261031a1f62",
       "wellformed": true,
       "canonical": false
+    },
+    {
+      "name": "group-reference-pattern",
+      "desc": "A group reference written as a pattern: not canonical",
+      "bytes": "1e05101d7461677318",
+      "wellformed": true,
+      "canonical": false
+    },
+    {
+      "name": "reference-pattern",
+      "desc": "A pattern with a record is canonical",
+      "bytes": "1e05101d746167731e30303118",
+      "wellformed": true,
+      "canonical": true
     },
     {
       "name": "mixed-record",

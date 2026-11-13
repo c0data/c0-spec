@@ -1,19 +1,21 @@
 # C0MARK Specification (Proposal)
 
 **Status:** proposal for a 1.x release, not normative, nothing built.
-Named 2026-11-08; grown from `notes/SKETCH-SUBSTITUTION.md`. It depends on
-the **pair** (`value SUB value`) being a unit kind of the base grammar,
-which is decided in direction and not yet in `GRAMMAR.md`. Nothing here is
-adopted until it appears in `DESIGN.md` and `GRAMMAR.md`.
+Named 2026-11-08; grown from `notes/PROPOSAL-SUPERSESSION.md`. It depends on
+**supersession** (SUB before a separator or opener: the element before is
+superseded by the element after) being a rule of the base grammar, which
+is decided in direction (2026-11-10, replacing the earlier pair
+`value SUB value`) and not yet in `GRAMMAR.md`. Nothing here is adopted
+until it appears in `DESIGN.md` and `GRAMMAR.md`.
 
 C0MARK is editor's marks in a C0DATA document, in the proofreader's
 sense: an insertion, a deletion, a substitution, a comment, written where
 the change is. A mark is anchored by its **position**; nothing is
 searched for. That is the difference from C0DIFF (`DIFF.md`), which finds
-its place in another file by matching text. The two share the pair and
-nothing else, so each is its own specification.
+its place in another file by matching text. The two share supersession
+and nothing else, so each is its own specification.
 
-    ␞␂Hello Mr. ␐␞Davis␚Davidson␇misremembered␘. How are you today?␃
+    ␞␂Hello Mr. ␐␞Davis␚␟Davidson␇misremembered␘. How are you today?␃
 
 An editor has marked `Davis` to be replaced by `Davidson`, with a note
 saying why. The paragraph reads three ways: as the author wrote it, as
@@ -23,51 +25,56 @@ the editor would have it, and with the mark showing.
 ## Marks
 
 A mark is a **record** whose units say what happens at that position. Its
-unit kinds are the base grammar's: a pair is a change, a plain or text
-unit is a comment, a BEL note is a note.
+constructs are the base grammar's: a superseded unit with the unit that
+supersedes it is a change, a plain or text unit alone is a comment, a BEL
+note is a note.
 
 | Mark | Record | Meaning |
 |------|--------|---------|
-| substitute | `␞old␚new` | `old` stands here; `new` replaces it |
-| insert | `␞␂␃␚new` | nothing stands here; `new` is inserted |
-| delete | `␞old␚␂␃` | `old` stands here; it is removed |
+| substitute | `␞old␚␟new` | `old` stands here; `new` replaces it |
+| insert | `␞␚␟new` | nothing stands here; `new` is inserted |
+| delete | `␞old␚␟` | `old` stands here; it is removed |
 | comment | `␞text` | a remark on this position; nothing changes |
-| noted | `␞old␚new␇why` | any of the above, with a note |
+| noted | `␞old␚␟new␇why` | any of the above, with a note |
 
-A pair's sides are values: plain when layout rules allow, text when the
-side has edge whitespace, a line break, a tab or a control code. An
-inserted `Mr. ` keeps its trailing space only as text: `␞␂␃␚␂Mr. ␃`. The
-empty side is spelled `␂␃` and nothing else, so the byte after SUB always
-decides the parse.
+Both sides are units and are spelled as units: plain when layout rules
+allow, text when the side has edge whitespace, a line break, a tab or a
+control code, nothing when empty. An inserted `Mr. ` keeps its trailing
+space only as text: `␞␚␟␂Mr. ␃`.
 
 Richer marks cost nothing new, because a mark is a record and a record
 may be keyed: `␞␁old␟Davis␁new␟Davidson␁by␟tom` carries attribution as
 content. Two records at one position are two proposed readings. A mark
-inside a pair's right side is a reply to a mark.
+inside a superseding unit is a reply to a mark.
 
 
 ## Where a mark sits
 
-**On a whole unit.** A pair in a record marks the unit it occupies, and
-needs no new grammar at all: `␞old paragraph␚new paragraph`, or in a
-keyed record `␞␁title␟Draft␚Final`. The record is the document's own; the
-pair is one of its units.
+**On a whole unit.** A supersession in a record marks the unit it
+replaces, and needs no new grammar at all: `␞old paragraph␚␟new paragraph`.
+In a keyed record the grain is the keyed unit, since a keyed unit holds
+one value: `␞␁title␟Draft␚␁title␟Final` (see open question 5). The
+record is the document's own; the mark is two of its units.
 
 **Inside a text value.** Within the bytes of a value, a mark is an
 **island**: a level opened inside the text by DLE, holding the mark
 record, closed by CAN, with the text resuming after it.
 
-    substitute    ␂Hello Mr. ␐␞Davis␚Davidson␘. How are you today?␃
-    insert        ␂Hello ␐␞␂␃␚␂Mr. ␃␘Davis.␃
-    delete        ␂Hello ␐␞␂Mr. ␃␚␂␃␘Davis.␃
+    substitute    ␂Hello Mr. ␐␞Davis␚␟Davidson␘. How are you today?␃
+    insert        ␂Hello ␐␞␚␟␂Mr. ␃␘Davis.␃
+    delete        ␂Hello ␐␞␂Mr. ␃␚␟␘Davis.␃
     comment       ␂Hello Mr. ␐␞Davis␇check spelling␘.␃
+
+The RS is not optional: an island is a level, a level body begins with a
+code, and `␐␘` (the empty level) and `␐␞␘` (a level holding one empty
+record) must stay distinct.
 
 Only text can hold an island, because only text holds control codes as
 content. A plain value is marked whole or not at all.
 
-**On a whole record.** Deleting a record, a group line, a header row or a
+**On a whole record.** Deleting a record, a group, a header row or a
 level already exists in the base format: BEL before its code marks it
-dead. C0MARK adds nothing there.
+dead, contents included. C0MARK adds nothing there.
 
 
 ## Grammar
@@ -94,10 +101,11 @@ text. A document with no islands scans exactly as before.
 
 A marked document has three readings, each a C0DATA document:
 
-- **original**: every pair's left side, islands' comments and notes
-  dropped. The text as the author wrote it.
-- **clean**: every pair's right side, comments and notes dropped. The text
-  as the editor would have it.
+- **original**: every superseded unit, with the units that supersede
+  them, islands' comments and notes dropped. The text as the author wrote
+  it.
+- **clean**: every superseding unit, with the units they supersede,
+  comments and notes dropped. The text as the editor would have it.
 - **marked**: the document as written, marks showing. The marked copy.
 
 A comment-only island (`␐␞Davis␇check spelling␘`, one plain unit and a
@@ -111,16 +119,16 @@ other two.
 
 ## Canonical form and hashing
 
-Marks are content. A pair is hashed as written, both sides; an island is
-hashed as the bytes of its level. Two documents that differ only in a
+Marks are content. A supersession is hashed as written, both units; an
+island is hashed as the bytes of its level. Two documents that differ only in a
 mark are different documents, which is the point: the editor's hand is
 part of the record.
 
 **Open:** notes. Under `DESIGN.md`, canonicalisation strips BEL notes and
-the content hash does not cover them. Applied to a mark, `␞old␚new␇why`
-canonicalises to `␞old␚new`, and the reason for the change is not in the
-hash. That follows the base rule and may be right: the pair is the
-change, the note is commentary. If a reason must survive canonicalisation
+the content hash does not cover them. Applied to a mark, `␞old␚␟new␇why`
+canonicalises to `␞old␚␟new`, and the reason for the change is not in the
+hash. That follows the base rule and may be right: the supersession is
+the change, the note is commentary. If a reason must survive canonicalisation
 it is written as content, `␁why␟misremembered`. Whether a mark's note
 should be treated differently from any other note is undecided; the lean
 is no, one rule for BEL everywhere.
@@ -128,7 +136,7 @@ is no, one rule for BEL everywhere.
 
 ## Relationship to C0DATA
 
-The pair is the base grammar's. DLE and CAN keep their meanings, open a
+Supersession is the base grammar's. DLE and CAN keep their meanings, open a
 level and close it; C0MARK only admits them inside text. BEL keeps its two
 meanings, note and dead. Framing codes (ETB, EOT, SYN, EM) cut through an
 island as they cut through text and levels: a document reader that meets
@@ -147,7 +155,7 @@ since no byte sequence that was legal changes meaning. The heading's
 A C0DIFF document acts on another file and anchors by matching. A C0MARK
 mark acts on the document it is in and anchors by position. A diff can be
 derived from a marked document, since the text around an island is an
-exact anchor and the pair is the substitution, and a diff could be
+exact anchor and the supersession is the substitution, and a diff could be
 applied to produce a marked document rather than a changed one. Neither
 derivation is specified here.
 
@@ -170,10 +178,19 @@ gain the three readings. None of this is needed for C0DIFF or for 1.0.
    meaning. Lean: legal, meaning left to the application, as with levels.
 3. Layout inside an island in the pretty form: a mark on one line, or the
    usual level layout.
-4. Whether the whole-unit pair outside text should be in C0MARK at all or
-   simply be the base grammar's pair, with C0MARK covering islands only.
-   Lean: C0MARK describes the editorial meaning of both; the grammar of
-   the whole-unit pair belongs to `GRAMMAR.md`.
+4. Whether the whole-unit mark outside text should be in C0MARK at all or
+   simply be the base grammar's supersession, with C0MARK covering islands
+   only. Lean: C0MARK describes the editorial meaning of both; the grammar
+   belongs to `GRAMMAR.md`.
+5. The keyed-unit grain. A keyed unit holds one value, so a change to it
+   is `␚␁` with the key repeated, `␞␁title␟Draft␚␁title␟Final`, not `␚␟`
+   inside the unit. Whether that repetition is acceptable, or a keyed
+   unit should admit `␚␟` after its value as a special case, is open.
+   Lean: repeat the key; no special case.
+6. Whether an island needs its RS (`␐␞old␚␟new␘` against `␐old␚␟new␘`).
+   Asked 2026-11-10. Lean: keep it, for the three reasons given under
+   "Inside a text value": one body grammar, `␐␘` against `␐␞␘`, and
+   islands with more than one record need it anyway.
 
 
 ## Conformance

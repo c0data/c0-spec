@@ -29,7 +29,7 @@ full specification and future directions.
 | 0x17 | ETB | ␗ | Commit marker (stream mode) |
 | 0x18 | CAN | ␘ | Close a nested level |
 | 0x19 | EM  | ␙ | End of medium: raw blob follows |
-| 0x1A | SUB | ␚ | Substitution (C0DIFF) |
+| 0x1A | SUB | ␚ | Supersede: the element before the next separator is replaced by the one after |
 | 0x1C | FS  | ␜ | File separator |
 | 0x1D | GS  | ␝ | Group / Table / Section separator |
 | 0x1E | RS  | ␞ | Record / Row separator |
@@ -66,11 +66,16 @@ heading is just `␖`.
 ```
 ␖␜mydb␝users␁␞name␟amount␞Alice␟100␄          empty heading
 ␖␁shape␟stream␞alice␟100␗␞bob␟200␗             a log (no EOT: logs have no end)
-␖␁shape␟diff␜foo.txt␝␂Hello ␃␟world␚universe␄  a C0DIFF
+␖␁shape␟diff␜foo.txt␞␂Hello ␃␟world␚␟universe␟!␄  a C0DIFF
 ```
 
 Heading keys: `shape` (`diff`, `stream`; absent means the application
-decides), `version` (absent means 1), `blob` (see Trailing Blob). An
+decides), `version` (absent means 1), `blob` (see Trailing Blob),
+`schema` (the schema the body claims to conform to: a plain name, or a
+level holding one keyed record of `name`, `url` and `hash`, any subset,
+`␁schema␟␐␞␁url␟https://example.org/ledger/1␁hash␟sha256:9f86…␘`; the
+hash is of the schema's canonical body; the format checks the form, a
+schema layer refuses on mismatch). An
 unknown key is a loud warning. SYN is required at the start of every file
 and message; EOT at the end of every document except a log. A missing one
 is a loud warning; strict mode makes loud warnings errors.
@@ -142,8 +147,8 @@ expresses multiple common data shapes.
 | Key-Value  | GS, RS, SOH                | TOML, INI            |
 | Nested     | DLE … CAN, any inner codes | JSON objects, arrays |
 | Text       | STX/ETX                    | quoted strings       |
-| Reference  | ENQ, text for paths        | foreign keys, links  |
-| Diff       | FS, GS, US, SUB            | unified diff, patches|
+| Reference  | ENQ, a level pattern for paths | foreign keys, links  |
+| Diff       | FS, RS, US, SUB            | unified diff, patches|
 | Stream     | RS, US, ETB                | NDJSON, SSE, WAL     |
 | Container  | SYN heading, EM            | tar, zip             |
 
@@ -166,7 +171,9 @@ sides). By convention the first field is the record's id.
 ### Keyed records (maps)
 
 SOH inside a record introduces a keyed unit: `␁key␟value`. A record is
-positional or keyed, never mixed. Keys are unique in canonical form and
+positional or keyed, never mixed: keyed when it holds at least one keyed
+unit, live or dead, positional otherwise (`␞␇n`, a note alone, is one
+empty unit). Keys are unique in canonical form and
 stay in the order written; sorting is the producer's choice.
 
 ```
@@ -244,22 +251,32 @@ Simple reference (entire group):
 ␅tags
 ```
 
-Path reference (record or field within a group), fenced as text because the
-US would otherwise end the field:
+Path reference: a level whose body is the target with its values left out,
+written in the document's own codes, so a reader parses it as any level:
 
 ```
-␅␂tags␟001␟label␃
+␅␐␝tags␞001␟label␘
 ```
 
-US separates path segments: group → record id → field name.
+Group `tags`, the record whose first field is `001`, its field under the
+header name `label`. A file line names the file (`␅␐␜b␝tags␞001␘`), GS
+repetition is depth (`␅␐␝docs␝␝intro␞3␘`), a keyed unit is named with its
+value left empty (`␅␐␝server␞␁host␟␘`), and a level in the third unit
+continues into the field's level (`␅␐␝tags␞001␟children␟␐␞2␘␘`). Every
+name is plain; text, header rows, dead elements and a second branch are
+errors. A reference resolves to the nearest matching target before it,
+else the first after it, so nothing appended later changes an earlier
+reference.
 
 ### Comments (BEL)
 
-BEL marks the next thing dead. BEL followed by text is a note, which ends
+BEL marks the next thing dead. BEL followed by a value is a note, which ends
 at the next control code like any other code's text. BEL followed by a
-structural code marks that element dead: a record, group line, header row,
-keyed unit, file line or nested level is parsed as written and then
-discarded. A note that must hold control codes is text: `␇␂…␃`.
+structural code marks that element dead: a record, header row, keyed
+unit or nested level, or a group or file with everything it holds, is
+parsed as written and then discarded. A note that must hold control codes
+is text, `␇␂…␃`, which is also how a group or file line is commented out
+alone, with what follows falling through to the element before.
 
 ```
 ␇ settings for staging
@@ -276,7 +293,10 @@ US, ETX, CAN or a framing code is an error.
 ETB commits the bytes appended since the previous ETB. A trailing block
 without ETB is torn and skipped; writers repair the tail before appending.
 An unescaped ETB is always a commit, even inside text, so a torn text cannot
-hide later commits.
+hide later commits. A committed block that is not well-formed, cut by its
+ETB inside open text or holding any other error, is damaged: nothing in
+it is delivered, it is reported with the offset where reading can resume,
+and the library continues past it only when asked.
 
 ```
 ␖␁shape␟stream␁␞op␟id␗
@@ -304,30 +324,30 @@ a blob by name.
 
 C0DIFF provides atomic multi-file edits using **anchored patterns**: literal
 context text surrounding the parts to change, instead of line numbers. It
-is a profile of C0DATA (`shape␟diff`), specified in full in
-[DIFF.md](DIFF.md).
+is a profile of C0DATA (`shape␟diff`) that parses under the base grammar,
+specified in full in [DIFF.md](DIFF.md).
 
 ```
 ␖␁shape␟diff
 ␜greeting.txt
-  ␝␂Hello ␃␟world␚universe␟!
+  ␞␂Hello ␃␟world␚␟universe␟!
 ␜tally.rb
-  ␝def tally(items)
-  ␞count␚total
-  ␝end
+  ␞def tally(items)
+  ␞␂  ␃␟count␚␟total␟␂ = 0␃
+  ␞␂  # TODO␃␚␟
 ␄
 ```
 
-- `␝` begins a section: a pattern of US-separated units, each an anchor or
-  an `old␚new` substitution. The pattern must match exactly once after the
-  previous section's match.
-- `␞old␚new` after a section replaces **every** occurrence within that
-  section's scope (to the next section's match, or end of file).
-- Empty old inserts; empty new deletes; a section with no `␚` asserts.
-- Anchors with edge whitespace or line breaks are text (`␂…␃`).
-- All files are validated before any is written; any error anywhere means
-  nothing is written.
-
+- `␜path` begins a file. `␞` begins a record, one anchored pattern whose
+  US-separated units are anchors or substitutions, `old␚␟new`
+  (supersession: the unit before the US is replaced by the unit after).
+  The pattern must match exactly once after the previous record's match.
+- Empty old inserts; empty new deletes; a record with no `␚` asserts.
+- Everything the diff does not use (keyed units, levels, references,
+  header rows, GS, other grains of supersession, dead records or file
+  lines) is an error in a diff. There is no replace-all: a tool expands
+  one into anchored records against the target.
+- The whole diff is validated before anything is written.
 
 ---
 

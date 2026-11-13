@@ -333,7 +333,7 @@
     },
     {
       "name": "reference-plain",
-      "desc": "A group reference is plain, never text",
+      "desc": "A group reference is plain; a path is a level pattern",
       "build": {
         "file": null,
         "groups": [
@@ -346,17 +346,33 @@
                   "ref": "tags"
                 },
                 {
-                  "ref": [
-                    "tags",
-                    "001"
-                  ]
+                  "ref": {
+                    "level": {
+                      "files": [
+                        {
+                          "name": null,
+                          "groups": [
+                            {
+                              "name": "tags",
+                              "headers": null,
+                              "records": [
+                                [
+                                  "001"
+                                ]
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
                 }
               ]
             ]
           }
         ]
       },
-      "canonical": "1e05746167731f0502746167731f30303103"
+      "canonical": "1e05746167731f05101d746167731e30303118"
     },
     {
       "name": "nested-map",
@@ -480,13 +496,13 @@
             "1"
           ],
           [
-            "shape",
-            "tabular"
+            "schema",
+            "ledger"
           ]
         ]
       },
       "canonical": "1d671e61",
-      "bytes": "160176657273696f6e1f310173686170651f746162756c61721d671e6104"
+      "bytes": "160176657273696f6e1f3101736368656d611f6c65646765721d671e6104"
     }
   ]
 }

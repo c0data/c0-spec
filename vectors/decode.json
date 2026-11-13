@@ -788,8 +788,8 @@
     },
     {
       "name": "reference-path",
-      "desc": "ENQ with text is a path; segments split on US",
-      "bytes": "1e611f0502746167731f3030311f6c6162656c03",
+      "desc": "ENQ with a level is a pattern: group, record id, field name; reported as the level written",
+      "bytes": "1e611f05101d746167731e3030311f6c6162656c18",
       "file": null,
       "groups": [
         {
@@ -799,15 +799,527 @@
             [
               "a",
               {
-                "ref": [
-                  "tags",
-                  "001",
-                  "label"
-                ]
+                "ref": {
+                  "level": {
+                    "files": [
+                      {
+                        "name": null,
+                        "groups": [
+                          {
+                            "name": "tags",
+                            "headers": null,
+                            "records": [
+                              [
+                                "001",
+                                "label"
+                              ]
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
               }
             ]
           ]
         }
+      ]
+    },
+    {
+      "name": "reference-record",
+      "desc": "A pattern may stop at the record",
+      "bytes": "1e611f05101d746167731e30303118",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              {
+                "ref": {
+                  "level": {
+                    "files": [
+                      {
+                        "name": null,
+                        "groups": [
+                          {
+                            "name": "tags",
+                            "headers": null,
+                            "records": [
+                              [
+                                "001"
+                              ]
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reference-group-pattern",
+      "desc": "A pattern that is a bare group is a group reference (legal, not canonical)",
+      "bytes": "1e611f05101d7461677318",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              {
+                "ref": {
+                  "level": {
+                    "files": [
+                      {
+                        "name": null,
+                        "groups": [
+                          {
+                            "name": "tags",
+                            "headers": null,
+                            "records": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reference-file",
+      "desc": "A file line in a pattern names the file",
+      "bytes": "1e611f05101c621d746167731e30303118",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              {
+                "ref": {
+                  "level": {
+                    "files": [
+                      {
+                        "name": "b",
+                        "groups": [
+                          {
+                            "name": "tags",
+                            "headers": null,
+                            "records": [
+                              [
+                                "001"
+                              ]
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reference-depth",
+      "desc": "GS repetition in a pattern is depth, as in the document",
+      "bytes": "1e611f05101d646f63731d1d696e74726f1e3318",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              {
+                "ref": {
+                  "level": {
+                    "files": [
+                      {
+                        "name": null,
+                        "groups": [
+                          {
+                            "name": "docs",
+                            "headers": null,
+                            "records": [],
+                            "sections": [
+                              {
+                                "name": "intro",
+                                "headers": null,
+                                "records": [
+                                  [
+                                    "3"
+                                  ]
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reference-keyed-unit",
+      "desc": "A keyed unit is named by a keyed unit with an empty value",
+      "bytes": "1e611f05101d7365727665721e01686f73741f18",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              {
+                "ref": {
+                  "level": {
+                    "files": [
+                      {
+                        "name": null,
+                        "groups": [
+                          {
+                            "name": "server",
+                            "headers": null,
+                            "records": [
+                              {
+                                "keys": [
+                                  [
+                                    "host",
+                                    ""
+                                  ]
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reference-into-level",
+      "desc": "A level in the third unit continues the pattern into the field's level",
+      "bytes": "1e611f05101d746167731e3030311f6368696c6472656e1f101e321818",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              {
+                "ref": {
+                  "level": {
+                    "files": [
+                      {
+                        "name": null,
+                        "groups": [
+                          {
+                            "name": "tags",
+                            "headers": null,
+                            "records": [
+                              [
+                                "001",
+                                "children",
+                                {
+                                  "level": {
+                                    "headers": null,
+                                    "records": [
+                                      [
+                                        "2"
+                                      ]
+                                    ]
+                                  }
+                                }
+                              ]
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reference-note-inside",
+      "desc": "A note inside a pattern is a note, not a step",
+      "bytes": "1e611f05101d74616773077768791e30303118",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              {
+                "ref": {
+                  "level": {
+                    "files": [
+                      {
+                        "name": null,
+                        "groups": [
+                          {
+                            "name": "tags",
+                            "headers": null,
+                            "records": [
+                              [
+                                "001"
+                              ]
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "supersede-unit",
+      "desc": "SUB before US: the unit before is superseded by the unit after; a document model reports the result",
+      "bytes": "1e611f621a1f63",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              "c"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "supersede-deletion",
+      "desc": "An empty superseding unit deletes: the result keeps the empty unit",
+      "bytes": "1e6f6c641a1f1e656e64",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              ""
+            ],
+            [
+              "end"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "supersede-insertion",
+      "desc": "The empty first unit superseded by a value: an insertion",
+      "bytes": "1e1a1f6e6577",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "new"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "supersede-middle",
+      "desc": "Arity counts the result: the superseded unit is not counted",
+      "bytes": "1e611f621a1f1f63",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              "",
+              "c"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "supersede-chain",
+      "desc": "Supersessions chain; the last stands",
+      "bytes": "1e611a1f621a1f63",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "c"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "supersede-record",
+      "desc": "SUB before RS: the record before is superseded by the record after",
+      "bytes": "1e611f621a1e611f63",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a",
+              "c"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "supersede-keyed-unit",
+      "desc": "SUB before SOH: the keyed unit before is superseded",
+      "bytes": "1e016b1f761a016b1f77",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            {
+              "keys": [
+                [
+                  "k",
+                  "w"
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "supersede-group",
+      "desc": "SUB before GS: the group before, at that depth, is superseded",
+      "bytes": "1d671e781a1d671e79",
+      "file": null,
+      "groups": [
+        {
+          "name": "g",
+          "headers": null,
+          "records": [
+            [
+              "y"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "supersede-file",
+      "desc": "SUB before FS: the file before is superseded",
+      "bytes": "1c661d671e781a1c661d671e79",
+      "file": "f",
+      "groups": [
+        {
+          "name": "g",
+          "headers": null,
+          "records": [
+            [
+              "y"
+            ]
+          ]
+        }
+      ],
+      "files": [
+        {
+          "name": "f",
+          "groups": [
+            {
+              "name": "g",
+              "headers": null,
+              "records": [
+                [
+                  "y"
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "supersede-in-heading",
+      "desc": "Supersession is legal in the heading too",
+      "bytes": "1601736368656d611f611a01736368656d611f621e78",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "x"
+            ]
+          ]
+        }
+      ],
+      "heading": [
+        [
+          "schema",
+          "b"
+        ]
       ]
     },
     {
@@ -843,6 +1355,70 @@
             [
               "p3"
             ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "header-not-inherited",
+      "desc": "A header row names its own group's fields; a subsection inherits nothing",
+      "bytes": "1d63011e611f621e311f321d1d731e331f34",
+      "file": null,
+      "groups": [
+        {
+          "name": "c",
+          "headers": [
+            "a",
+            "b"
+          ],
+          "records": [
+            [
+              "1",
+              "2"
+            ]
+          ],
+          "sections": [
+            {
+              "name": "s",
+              "headers": null,
+              "records": [
+                [
+                  "3",
+                  "4"
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gs-depth-skipped",
+      "desc": "A skipped depth is reported as nothing: c is at depth three, no group at depth two",
+      "bytes": "1d611d1d1d631e31",
+      "file": null,
+      "groups": [
+        {
+          "name": "a",
+          "headers": null,
+          "records": [],
+          "sections": [
+            {
+              "name": null,
+              "headers": null,
+              "records": [],
+              "sections": [
+                {
+                  "name": "c",
+                  "headers": null,
+                  "records": [
+                    [
+                      "1"
+                    ]
+                  ]
+                }
+              ]
+            }
           ]
         }
       ]
@@ -1067,7 +1643,7 @@
     {
       "name": "heading-keys",
       "desc": "The heading is keyed units after SYN",
-      "bytes": "160173686170651f746162756c61720176657273696f6e1f311e611f62",
+      "bytes": "1601736368656d611f6c65646765720176657273696f6e1f311e611f62",
       "file": null,
       "groups": [
         {
@@ -1083,12 +1659,183 @@
       ],
       "heading": [
         [
-          "shape",
-          "tabular"
+          "schema",
+          "ledger"
         ],
         [
           "version",
           "1"
+        ]
+      ]
+    },
+    {
+      "name": "header-row-note",
+      "desc": "A header row is a record of names and admits notes like any record",
+      "bytes": "011e61076e1f621e311f32",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": [
+            "a",
+            "b"
+          ],
+          "records": [
+            [
+              "1",
+              "2"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "heading-duplicate-key",
+      "desc": "Duplicate heading keys are reported as written (a reader takes the last, with a loud warning)",
+      "bytes": "1601736368656d611f6101736368656d611f621e78",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "x"
+            ]
+          ]
+        }
+      ],
+      "heading": [
+        [
+          "schema",
+          "a"
+        ],
+        [
+          "schema",
+          "b"
+        ]
+      ]
+    },
+    {
+      "name": "heading-schema-record",
+      "desc": "schema may be a level holding one keyed record of name, url and hash",
+      "bytes": "1601736368656d611f101e016e616d651f6c65646765720175726c1f68747470733a2f2f6578616d706c652e6f72672f6c65646765722f3101686173681f7368613235363a39663836643038313838346337643635396132666561613063353561643031356133626634663162326230623832326364313564366331356230663030613038181e61",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a"
+            ]
+          ]
+        }
+      ],
+      "heading": [
+        [
+          "schema",
+          {
+            "level": {
+              "headers": null,
+              "records": [
+                {
+                  "keys": [
+                    [
+                      "name",
+                      "ledger"
+                    ],
+                    [
+                      "url",
+                      "https://example.org/ledger/1"
+                    ],
+                    [
+                      "hash",
+                      "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+                    ]
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "heading-schema-pinned",
+      "desc": "url and hash: fetchable and pinned",
+      "bytes": "1601736368656d611f101e0175726c1f68747470733a2f2f6578616d706c652e6f72672f6c65646765722f3101686173681f7368613235363a39663836643038313838346337643635396132666561613063353561643031356133626634663162326230623832326364313564366331356230663030613038181e61",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a"
+            ]
+          ]
+        }
+      ],
+      "heading": [
+        [
+          "schema",
+          {
+            "level": {
+              "headers": null,
+              "records": [
+                {
+                  "keys": [
+                    [
+                      "url",
+                      "https://example.org/ledger/1"
+                    ],
+                    [
+                      "hash",
+                      "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+                    ]
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "heading-schema-hash-only",
+      "desc": "A hash alone is a content-addressed schema",
+      "bytes": "1601736368656d611f101e01686173681f7368613235363a39663836643038313838346337643635396132666561613063353561643031356133626634663162326230623832326364313564366331356230663030613038181e61",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              "a"
+            ]
+          ]
+        }
+      ],
+      "heading": [
+        [
+          "schema",
+          {
+            "level": {
+              "headers": null,
+              "records": [
+                {
+                  "keys": [
+                    [
+                      "hash",
+                      "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+                    ]
+                  ]
+                }
+              ]
+            }
+          }
         ]
       ]
     },
@@ -1222,9 +1969,78 @@
       ]
     },
     {
-      "name": "comment-dead-group-line",
-      "desc": "A dead group line; its records belong to the group before",
+      "name": "comment-dead-group",
+      "desc": "A dead group takes its records with it",
       "bytes": "1d67311e31071d67321e32",
+      "file": null,
+      "groups": [
+        {
+          "name": "g1",
+          "headers": null,
+          "records": [
+            [
+              "1"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-dead-group-with-header",
+      "desc": "A dead group takes its header row and records; the next live group is unaffected",
+      "bytes": "1d67311e31071d6732011e781e321d67331e34",
+      "file": null,
+      "groups": [
+        {
+          "name": "g1",
+          "headers": null,
+          "records": [
+            [
+              "1"
+            ]
+          ]
+        },
+        {
+          "name": "g3",
+          "headers": null,
+          "records": [
+            [
+              "4"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-dead-group-subsections",
+      "desc": "A dead group ends where a live one would, so its deeper subsections die with it",
+      "bytes": "1d67311e31071d67321e321d1d731e331d67331e34",
+      "file": null,
+      "groups": [
+        {
+          "name": "g1",
+          "headers": null,
+          "records": [
+            [
+              "1"
+            ]
+          ]
+        },
+        {
+          "name": "g3",
+          "headers": null,
+          "records": [
+            [
+              "4"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-label-in-note",
+      "desc": "A group line inside a text note is gone and its records fall through to the group before",
+      "bytes": "1d67311e3107021d6732031e32",
       "file": null,
       "groups": [
         {
@@ -1446,8 +2262,8 @@
       ]
     },
     {
-      "name": "comment-dead-file-line",
-      "desc": "A dead file line is read as if absent: what follows stays in the file before it, leading records in that file's last group",
+      "name": "comment-dead-file",
+      "desc": "A dead file takes its groups and records with it, up to the next FS or the end",
       "bytes": "1c611d781e31071c621e321d791e33",
       "file": "a",
       "groups": [
@@ -1457,18 +2273,6 @@
           "records": [
             [
               "1"
-            ],
-            [
-              "2"
-            ]
-          ]
-        },
-        {
-          "name": "y",
-          "headers": null,
-          "records": [
-            [
-              "3"
             ]
           ]
         }
@@ -1483,12 +2287,47 @@
               "records": [
                 [
                   "1"
-                ],
-                [
-                  "2"
                 ]
               ]
-            },
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-dead-file-then-live",
+      "desc": "A dead file ends at the next file line",
+      "bytes": "1c611d781e31071c621e321c631d791e33",
+      "file": "a",
+      "groups": [
+        {
+          "name": "x",
+          "headers": null,
+          "records": [
+            [
+              "1"
+            ]
+          ]
+        }
+      ],
+      "files": [
+        {
+          "name": "a",
+          "groups": [
+            {
+              "name": "x",
+              "headers": null,
+              "records": [
+                [
+                  "1"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "name": "c",
+          "groups": [
             {
               "name": "y",
               "headers": null,
@@ -1559,6 +2398,26 @@
             {
               "keys": []
             },
+            [
+              "x"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-note-only-record",
+      "desc": "A record holding nothing but a note is positional: one empty unit (a record is keyed only by a keyed unit, live or dead)",
+      "bytes": "1e076e1e78",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              ""
+            ],
             [
               "x"
             ]

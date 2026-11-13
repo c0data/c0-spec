@@ -48,6 +48,14 @@ def keyed(*pairs):
     return {"keys": [list(p) for p in pairs]}
 
 
+def ref(groups=None, file=None):
+    """A reference: a group name (str) or a pattern, reported as the level
+    it is written as."""
+    if isinstance(groups, str):
+        return {"ref": groups}
+    return {"ref": {"level": {"files": [{"name": file, "groups": groups}]}}}
+
+
 OUT = pathlib.Path(__file__).parent
 
 # ---------------------------------------------------------------- decode
@@ -154,14 +162,61 @@ dec("nested-document", "A level may hold a whole body: groups and files",
     "␞doc␟␐␜f␝g1␞a␝g2␁␞x␞b␘",
     [g("", [["doc", {"level": {"files": [{"name": "f", "groups": [g("g1", [["a"]]), g("g2", [["b"]], ["x"])]}]}}]])])
 dec("reference-group", "ENQ with a plain name is a group reference; reported as written",
-    "␞a␟␅tags", [g("", [["a", {"ref": "tags"}]])])
-dec("reference-path", "ENQ with text is a path; segments split on US",
-    "␞a␟␅␂tags␟001␟label␃", [g("", [["a", {"ref": ["tags", "001", "label"]}]])])
+    "␞a␟␅tags", [g("", [["a", ref("tags")]])])
+dec("reference-path", "ENQ with a level is a pattern: group, record id, field name; reported as the level written",
+    "␞a␟␅␐␝tags␞001␟label␘", [g("", [["a", ref([g("tags", [["001", "label"]])])]])])
+dec("reference-record", "A pattern may stop at the record",
+    "␞a␟␅␐␝tags␞001␘", [g("", [["a", ref([g("tags", [["001"]])])]])])
+dec("reference-group-pattern", "A pattern that is a bare group is a group reference (legal, not canonical)",
+    "␞a␟␅␐␝tags␘", [g("", [["a", ref([g("tags", [])])]])])
+dec("reference-file", "A file line in a pattern names the file",
+    "␞a␟␅␐␜b␝tags␞001␘", [g("", [["a", ref([g("tags", [["001"]])], "b")]])])
+dec("reference-depth", "GS repetition in a pattern is depth, as in the document",
+    "␞a␟␅␐␝docs␝␝intro␞3␘",
+    [g("", [["a", ref([{"name": "docs", "headers": None, "records": [],
+                        "sections": [{"name": "intro", "headers": None, "records": [["3"]]}]}])]])])
+dec("reference-keyed-unit", "A keyed unit is named by a keyed unit with an empty value",
+    "␞a␟␅␐␝server␞␁host␟␘", [g("", [["a", ref([g("server", [keyed(("host", ""))])])]])])
+dec("reference-into-level", "A level in the third unit continues the pattern into the field's level",
+    "␞a␟␅␐␝tags␞001␟children␟␐␞2␘␘",
+    [g("", [["a", ref([g("tags", [["001", "children", level([["2"]])]])])]])])
+dec("reference-note-inside", "A note inside a pattern is a note, not a step",
+    "␞a␟␅␐␝tags␇why␞001␘", [g("", [["a", ref([g("tags", [["001"]])])]])])
+dec("supersede-unit", "SUB before US: the unit before is superseded by the unit after; a document model reports the result",
+    "␞a␟b␚␟c", [g("", [["a", "c"]])])
+dec("supersede-deletion", "An empty superseding unit deletes: the result keeps the empty unit",
+    "␞old␚␟␞end", [g("", [[""], ["end"]])])
+dec("supersede-insertion", "The empty first unit superseded by a value: an insertion",
+    "␞␚␟new", [g("", [["new"]])])
+dec("supersede-middle", "Arity counts the result: the superseded unit is not counted",
+    "␞a␟b␚␟␟c", [g("", [["a", "", "c"]])])
+dec("supersede-chain", "Supersessions chain; the last stands",
+    "␞a␚␟b␚␟c", [g("", [["c"]])])
+dec("supersede-record", "SUB before RS: the record before is superseded by the record after",
+    "␞a␟b␚␞a␟c", [g("", [["a", "c"]])])
+dec("supersede-keyed-unit", "SUB before SOH: the keyed unit before is superseded",
+    "␞␁k␟v␚␁k␟w", [g("", [keyed(("k", "w"))])])
+dec("supersede-group", "SUB before GS: the group before, at that depth, is superseded",
+    "␝g␞x␚␝g␞y", [g("g", [["y"]])])
+dec("supersede-file", "SUB before FS: the file before is superseded",
+    "␜f␝g␞x␚␜f␝g␞y", [g("g", [["y"]])], file="f",
+    files=[{"name": "f", "groups": [g("g", [["y"]])]}])
+dec("supersede-in-heading", "Supersession is legal in the heading too",
+    "␖␁schema␟a␚␁schema␟b␞x", [g("", [["x"]])], heading=[["schema", "b"]])
 dec("gs-depth", "GS repetition is depth; subsections belong to the group",
     "␝c1␞p1␝␝s1␞p2␝c2␞p3",
     [{"name": "c1", "headers": None, "records": [["p1"]],
       "sections": [{"name": "s1", "headers": None, "records": [["p2"]]}]},
      g("c2", [["p3"]])])
+dec("header-not-inherited", "A header row names its own group's fields; a subsection inherits nothing",
+    "␝c␁␞a␟b␞1␟2␝␝s␞3␟4",
+    [{"name": "c", "headers": ["a", "b"], "records": [["1", "2"]],
+      "sections": [{"name": "s", "headers": None, "records": [["3", "4"]]}]}])
+dec("gs-depth-skipped", "A skipped depth is reported as nothing: c is at depth three, no group at depth two",
+    "␝a␝␝␝c␞1",
+    [{"name": "a", "headers": None, "records": [],
+      "sections": [{"name": None, "headers": None, "records": [],
+                    "sections": [{"name": "c", "headers": None, "records": [["1"]]}]}]}])
 dec("two-files", "A document may hold several FS files",
     "␜a␝g␞1␜b␝g␞2",
     [g("g", [["1"]])], file="a", files=[{"name": "a", "groups": [g("g", [["1"]])]},
@@ -185,8 +240,21 @@ dec("header-no-records", "Group with a header row and zero records",
 dec("heading-empty", "SYN with an empty heading, EOT at the end",
     "␖␝g␞a␄", [g("g", [["a"]])], heading=[])
 dec("heading-keys", "The heading is keyed units after SYN",
-    "␖␁shape␟tabular␁version␟1␞a␟b",
-    [g("", [["a", "b"]])], heading=[["shape", "tabular"], ["version", "1"]])
+    "␖␁schema␟ledger␁version␟1␞a␟b",
+    [g("", [["a", "b"]])], heading=[["schema", "ledger"], ["version", "1"]])
+dec("header-row-note", "A header row is a record of names and admits notes like any record",
+    "␁␞a␇n␟b␞1␟2", [g("", [["1", "2"]], ["a", "b"])])
+dec("heading-duplicate-key", "Duplicate heading keys are reported as written (a reader takes the last, with a loud warning)",
+    "␖␁schema␟a␁schema␟b␞x", [g("", [["x"]])], heading=[["schema", "a"], ["schema", "b"]])
+dec("heading-schema-record", "schema may be a level holding one keyed record of name, url and hash",
+    "␖␁schema␟␐␞␁name␟ledger␁url␟https://example.org/ledger/1␁hash␟sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08␘␞a",
+    [g("", [["a"]])], heading=[["schema", level([keyed(("name", "ledger"), ("url", "https://example.org/ledger/1"), ("hash", "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"))])]])
+dec("heading-schema-pinned", "url and hash: fetchable and pinned",
+    "␖␁schema␟␐␞␁url␟https://example.org/ledger/1␁hash␟sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08␘␞a",
+    [g("", [["a"]])], heading=[["schema", level([keyed(("url", "https://example.org/ledger/1"), ("hash", "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"))])]])
+dec("heading-schema-hash-only", "A hash alone is a content-addressed schema",
+    "␖␁schema␟␐␞␁hash␟sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08␘␞a",
+    [g("", [["a"]])], heading=[["schema", level([keyed(("hash", "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"))])]])
 dec("heading-then-header-row",
     "SOH RS ends the heading and is the body's header row",
     "␖␁version␟1␁␞x␟y␞1␟2",
@@ -202,8 +270,14 @@ dec("comment-record", "BEL before a record marks it dead; it is parsed and disca
     "␝g␞a␇␞b␞c", [g("g", [["a"], ["c"]])])
 dec("comment-layout-then-record", "Layout after BEL is layout; the record is still dead",
     "␝g␇␊␞b␞c", [g("g", [["c"]])])
-dec("comment-dead-group-line", "A dead group line; its records belong to the group before",
-    "␝g1␞1␇␝g2␞2", [g("g1", [["1"], ["2"]])])
+dec("comment-dead-group", "A dead group takes its records with it",
+    "␝g1␞1␇␝g2␞2", [g("g1", [["1"]])])
+dec("comment-dead-group-with-header", "A dead group takes its header row and records; the next live group is unaffected",
+    "␝g1␞1␇␝g2␁␞x␞2␝g3␞4", [g("g1", [["1"]]), g("g3", [["4"]])])
+dec("comment-dead-group-subsections", "A dead group ends where a live one would, so its deeper subsections die with it",
+    "␝g1␞1␇␝g2␞2␝␝s␞3␝g3␞4", [g("g1", [["1"]]), g("g3", [["4"]])])
+dec("comment-label-in-note", "A group line inside a text note is gone and its records fall through to the group before",
+    "␝g1␞1␇␂␝g2␃␞2", [g("g1", [["1"], ["2"]])])
 dec("comment-dead-keyed-unit", "A dead keyed unit is dropped from the map",
     "␞␁a␟1␇␁b␟2␁c␟3", [g("", [keyed(("a", "1"), ("c", "3"))])])
 dec("comment-note-in-heading", "A note between heading keys",
@@ -222,10 +296,14 @@ dec("comment-note-between-keyed-units", "A note ends at the next code; the next 
     "␞␁a␟1␇n␁b␟2␞x", [g("", [keyed(("a", "1"), ("b", "2")), ["x"]])])
 dec("comment-ends-at-header-row", "A note ends at a header row",
     "␝g␇note␁␞x␟y␞1␟2", [g("g", [["1", "2"]], ["x", "y"])])
-dec("comment-dead-file-line", "A dead file line is read as if absent: what follows stays in the file before it, leading records in that file's last group",
+dec("comment-dead-file", "A dead file takes its groups and records with it, up to the next FS or the end",
     "␜a␝x␞1␇␜b␞2␝y␞3",
-    [g("x", [["1"], ["2"]]), g("y", [["3"]])], file="a",
-    files=[{"name": "a", "groups": [g("x", [["1"], ["2"]]), g("y", [["3"]])]}])
+    [g("x", [["1"]])], file="a",
+    files=[{"name": "a", "groups": [g("x", [["1"]])]}])
+dec("comment-dead-file-then-live", "A dead file ends at the next file line",
+    "␜a␝x␞1␇␜b␞2␜c␝y␞3",
+    [g("x", [["1"]])], file="a",
+    files=[{"name": "a", "groups": [g("x", [["1"]])]}, {"name": "c", "groups": [g("y", [["3"]])]}])
 dec("comment-note-after-value", "A note after a value is skipped and is not a unit",
     "␞a␇n␟b", [g("", [["a", "b"]])])
 dec("comment-notes-after-text", "Notes may follow a text value, in a positional or a keyed unit; several notes are still one unit",
@@ -233,6 +311,8 @@ dec("comment-notes-after-text", "Notes may follow a text value, in a positional 
     [g("", [["a b", "c"], keyed(("k", "v"))])])
 dec("comment-all-keyed-units-dead", "A keyed record whose units are all dead is an empty map",
     "␞␇␁k␟v␞x", [g("", [keyed(), ["x"]])])
+dec("comment-note-only-record", "A record holding nothing but a note is positional: one empty unit (a record is keyed only by a keyed unit, live or dead)",
+    "␞␇n␞x", [g("", [[""], ["x"]])])
 dec("comment-dead-header-then-live", "A dead header row does not take the header slot",
     "␝g␇␁␞x␟y␁␞p␟q␞1␟2", [g("g", [["1", "2"]], ["p", "q"])])
 dec("comment-with-text", "A note that holds control codes is text",
@@ -295,8 +375,8 @@ enc("nested-empty", "An empty list is an empty level", doc([g("", [[level([])]])
 enc("nested-one-empty", "A list of one empty string is a level with one empty record",
     doc([g("", [[level([[""]])]])]), "␞␐␞␘")
 enc("nested-empty-level", "An empty level is DLE CAN", doc([g("", [[level([]), "x"]])]), "␞␐␘␟x")
-enc("reference-plain", "A group reference is plain, never text",
-    doc([g("", [[{"ref": "tags"}, {"ref": ["tags", "001"]}]])]), "␞␅tags␟␅␂tags␟001␃")
+enc("reference-plain", "A group reference is plain; a path is a level pattern",
+    doc([g("", [[ref("tags"), ref([g("tags", [["001"]])])]])]), "␞␅tags␟␅␐␝tags␞001␘")
 enc("nested-map", "A map value is a level holding one keyed record, order kept",
     doc([g("", [["cfg", level([keyed(("b", "2"), ("a", "1"))])]])]),
     "␞cfg␟␐␞␁b␟2␁a␟1␘")
@@ -307,8 +387,8 @@ enc("file-two-groups", "Document with FS name and two groups; the canonical unit
     doc([g("g1", [["a"]]), g("g2", [["b"]], ["x"])], file="db"),
     "␜db␝g1␞a␝g2␁␞x␞b")
 enc("heading-written", "With a heading the file is SYN, heading as given, body, EOT; the canonical unit is the body",
-    doc([g("g", [["a"]])], heading=[["version", "1"], ["shape", "tabular"]]),
-    "␝g␞a", bytes_="␖␁version␟1␁shape␟tabular␝g␞a␄")
+    doc([g("g", [["a"]])], heading=[["version", "1"], ["schema", "ledger"]]),
+    "␝g␞a", bytes_="␖␁version␟1␁schema␟ledger␝g␞a␄")
 
 # -------------------------------------------------------------- canonical
 canonical = []
@@ -333,6 +413,8 @@ can("layout-space", "Whitespace touching a code is layout: legal, not canonical"
     "␞a ␟b", True, False)
 can("layout-newline", "Line breaks between codes are layout",
     "␝g␊␞a", True, False)
+can("note-between-gs", "A note between two GS: two groups at depth one, well-formed, not canonical; stripping the note would read as depth two, so a canonicaliser refuses rather than change depth",
+    "␝␇n␝b␞x", True, False)
 can("keyed-unique", "Keyed record with unique keys", "␞␁a␟1␁b␟2", True, True)
 can("keyed-any-order", "Key order is data, not a canonicality question", "␞␁b␟1␁a␟2", True, True)
 can("keyed-duplicate", "Duplicate key: not canonical", "␞␁a␟1␁a␟2", True, False)
@@ -353,7 +435,10 @@ can("unassigned-code", "Bare unassigned control byte: malformed", "␞a␆b", Fa
 can("so-byte", "SO is permanently unassigned", "␞a␎b", False, False)
 can("dle-before-plain", "DLE outside text must be followed by a code: malformed", "␞␐x␞a␘", False, False)
 can("empty-level", "DLE CAN is the empty level: canonical", "␞␐␘", True, True)
-can("text-reference", "A group reference written as text: not canonical", "␞␅␂tags␃", True, False)
+can("supersession-kept", "Supersession is content: kept and canonical", "␞a␚␟b", True, True)
+can("supersession-side-spelling", "Each side of a supersession is in its one spelling: text around plain is not canonical", "␞␂a␃␚␟b", True, False)
+can("group-reference-pattern", "A group reference written as a pattern: not canonical", "␞␅␐␝tags␘", True, False)
+can("reference-pattern", "A pattern with a record is canonical", "␞␅␐␝tags␞001␘", True, True)
 can("mixed-record", "A record is positional or keyed, never mixed", "␞a␁k␟v", False, False)
 
 # ---------------------------------------------------------------- invalid
@@ -380,11 +465,37 @@ inv("etx-unmatched", "ETX with no open text", "␞a␃")
 inv("level-unclosed", "A level open at end of input", "␞␐␞a")
 inv("can-unmatched", "CAN with no open level", "␞a␘")
 inv("header-row-mid-group", "A header row is only the first item of a group", "␝g␞1␁␞x␞2")
+inv("dead-header-row-mid-group", "A dead header row is parsed as if live, so out of place it is the same error", "␝g␞1␇␁␞x␞2")
+inv("two-header-rows", "A group has one header row", "␝g␁␞a␞1␁␞b␞2")
 inv("us-after-keyed-value", "US after a keyed value is a mixed record", "␞␁a␟1␟2")
-inv("sub-outside-diff", "SUB has no meaning outside a diff", "␞a␚b")
+inv("sub-before-value", "SUB qualifies the separator after it; before a value it matches nothing", "␞a␚b")
+inv("sub-before-text", "SUB before STX is an error", "␞a␚␂b␃")
+inv("sub-at-eof", "SUB at the end of input has nothing to qualify", "␞a␚")
+inv("sub-before-bel", "SUB next to BEL is an error", "␞a␟b␚␇␞c")
+inv("bel-before-sub", "BEL before SUB is an error: SUB is not an element", "␞a␇␚␟b")
+inv("sub-record-nothing-before", "A record supersession needs a record before it in the group", "␝g␚␞x")
+inv("sub-group-nothing-before", "A group supersession needs an earlier group at that depth", "␚␝g␞x")
+inv("sub-file-nothing-before", "A file supersession needs an earlier file", "␚␜f␞x")
+inv("sub-first-keyed-unit", "The first keyed unit of a record has nothing to supersede", "␞␚␁k␟v")
 inv("bytes-after-eot", "After EOT only layout, SYN or EM may follow", "␖␞a␄x")
+inv("heading-schema-positional", "A schema level holds a keyed record, not a positional one", "␖␁schema␟␐␞a␟b␘␞x")
+inv("heading-schema-two-records", "A schema level holds one record", "␖␁schema␟␐␞␁name␟a␞␁name␟b␘␞x")
+inv("heading-schema-unknown-key", "A schema record's keys are name, url and hash", "␖␁schema␟␐␞␁name␟a␁version␟1␘␞x")
+inv("heading-schema-empty", "schema needs a value", "␖␁schema␟␞x")
 inv("reference-empty-name", "A reference needs a name", "␞␅␟x")
-inv("reference-segment-not-name", "Every path segment is a name: no edge whitespace, no control bytes", "␞␅␂a␟ b␃")
+inv("reference-text", "ENQ followed by text is an error: every step of a path is a plain name", "␞␅␂tags␟001␃")
+inv("reference-step-not-name", "Every step of a pattern is a name: no edge whitespace, no control bytes", "␞␅␐␝tags␞␂ b␃␘")
+inv("reference-empty-pattern", "An empty level is not a reference", "␞␅␐␘")
+inv("reference-no-group", "A pattern begins with a file or group line", "␞␅␐␞001␘")
+inv("reference-two-records", "A pattern is one branch: two records at one depth", "␞␅␐␝tags␞001␞002␘")
+inv("reference-two-groups", "A pattern is one branch: two groups at one depth", "␞␅␐␝a␝b␘")
+inv("reference-group-after-record", "Nothing follows the record in a pattern", "␞␅␐␝a␞1␝b␘")
+inv("reference-four-units", "A pattern record holds at most id, field name and a level", "␞␅␐␝a␞1␟b␟c␟d␘")
+inv("reference-third-unit-not-level", "The third unit of a pattern record is a level", "␞␅␐␝a␞1␟b␟c␘")
+inv("reference-keyed-with-value", "A keyed unit in a pattern has no value", "␞␅␐␝s␞␁host␟x␘")
+inv("reference-two-keyed-units", "A keyed record in a pattern holds one keyed unit", "␞␅␐␝s␞␁a␟␁b␟␘")
+inv("reference-header-row", "A header row is not a step", "␞␅␐␝a␁␞x␞1␘")
+inv("reference-dead-step", "A dead element is not a step", "␞␅␐␝a␇␞1␘")
 inv("em-inside-level", "EM while a level is open", "␞␐␞a␙raw")
 inv("em-inside-text", "EM cuts through text; raw EM inside text is an error for a document reader", "␞␂a␙b␃")
 inv("bel-before-us", "BEL before US: US is not an element", "␞a␇␟b")
@@ -426,6 +537,14 @@ st("etb-in-text-cuts", "A raw ETB inside open text is a commit: the block is dam
    "␞␂a␗␞b␗", 7, False, ["␞␂a", "␞b"], damaged=[0])
 st("etb-in-level-cuts", "A raw ETB inside an open level is a commit: that block is damaged",
    "␞␐␞a␗␞b␗", 8, False, ["␞␐␞a", "␞b"], damaged=[0])
+st("malformed-block-damaged", "Any error inside a committed block damages that block alone; its bounds come from the ETB",
+   "␞a␗␞b␟␇␅tags␗␞c␗", 16, False, ["␞a", "␞b␟␇␅tags", "␞c"], [["a"], ["c"]], damaged=[1])
+st("late-header-row-damaged", "A header row after records is an error, so its block is damaged",
+   "␞a␗␁␞x␗␞b␗", 10, False, ["␞a", "␁␞x", "␞b"], [["a"], ["b"]], damaged=[1])
+st("batch-block-damaged", "A batch with one bad record is one damaged block: its sound records are not delivered",
+   "␞a␞b␟␇␅t␗␞c␗", 12, False, ["␞a␞b␟␇␅t", "␞c"], [["c"]], damaged=[0])
+st("payload-then-text-damaged", "What follows a payload begins the next block; text with no record there is an error, so that block is damaged",
+   "␞a␗p␂x␃␗␞b␗", 11, False, ["␞a", "␂x␃", "␞b"], [["a"], ["b"]], damaged=[1])
 st("heading-committed", "The SYN heading is committed with the first ETB like anything else",
    "␖␁shape␟stream␗␞a␗", 18, False, ["␖␁shape␟stream", "␞a"], [["a"]])
 st("header-row-committed", "A header row is committed like a record",
@@ -478,8 +597,10 @@ ne("empty-level", "DLE CAN: an empty level, read as an empty list", "␞a␟␐�
 
 # ------------------------------------------------------------------- diff
 # A small reference applier, so the expected outputs are computed from the
-# rules in DIFF.md rather than typed by hand. It handles what the vectors
-# use: SYN heading, FS/GS/RS/US/SUB, text with escapes, notes, layout.
+# rules in DIFF.md rather than typed by hand. It parses the base grammar as
+# far as a diff may use it (SYN heading, FS, RS, US, SUB US, text, notes,
+# commits, EOT) and refuses everything DIFF.md lists under "What a diff may
+# not hold".
 SEVEN = {0x02, 0x03, 0x10, 0x17, 0x04, 0x16, 0x19}
 LAYOUT = {0x09, 0x0A, 0x0D, 0x20}
 
@@ -488,10 +609,16 @@ class DiffError(Exception):
     pass
 
 
-def _value(bs, i):
-    """Read one value (plain or text) starting at i; return (bytes, next i)."""
+def _skip_layout(bs, i):
     while i < len(bs) and bs[i] in LAYOUT:
         i += 1
+    return i
+
+
+def _value(bs, i):
+    """Read one value (plain or text) starting at i; return (bytes, next i).
+    An empty value is allowed (nothing before the next code)."""
+    i = _skip_layout(bs, i)
     if i < len(bs) and bs[i] == 0x02:
         out = bytearray(); i += 1
         while True:
@@ -507,8 +634,7 @@ def _value(bs, i):
             if x in (0x17, 0x04, 0x16, 0x19):
                 raise DiffError("framing inside text")
             out.append(x); i += 1
-        while i < len(bs) and bs[i] in LAYOUT:
-            i += 1
+        i = _skip_layout(bs, i)
         if i < len(bs) and bs[i] >= 0x20:
             raise DiffError("text spliced")
         return bytes(out), i
@@ -525,190 +651,161 @@ def _value(bs, i):
 
 
 def _name(bs, i):
-    while i < len(bs) and bs[i] in LAYOUT:
-        i += 1
+    i = _skip_layout(bs, i)
     if i < len(bs) and bs[i] == 0x02:
         raise DiffError("a name cannot be text")
     return _value(bs, i)
 
 
-def _parse_diff(bs):
-    """→ list of (path, [ops]); op = ("section", [units]) | ("replace", old, new);
-    unit = (anchor_bytes, None) | (old, new)."""
-    i = 0; files = []
-    if i < len(bs) and bs[i] == 0x16:          # heading
-        i += 1
-        while True:
-            while i < len(bs) and bs[i] in LAYOUT:
-                i += 1
-            if i < len(bs) and bs[i] == 0x01:
-                k, i = _name(bs, i + 1)
-                if i >= len(bs) or bs[i] != 0x1F:
+def _skip_notes(bs, i):
+    """Skip notes (BEL + value). A BEL before a code is a dead marker: an error in a diff."""
+    while True:
+        j = _skip_layout(bs, i)
+        if j < len(bs) and bs[j] == 0x07:
+            k = _skip_layout(bs, j + 1)
+            if k >= len(bs):
+                raise DiffError("BEL at end of input")
+            if bs[k] >= 0x20 or bs[k] == 0x02:
+                _, i = _value(bs, k); continue
+            raise DiffError("dead element in a diff")
+        return i
+
+
+def _parse_heading(bs, i):
+    """After SYN. Returns next i. Checks shape; tolerates dead keys and notes."""
+    while True:
+        i = _skip_layout(bs, i)
+        if i < len(bs) and bs[i] == 0x01:
+            k, i = _name(bs, i + 1)
+            if i >= len(bs) or bs[i] != 0x1F:
+                raise DiffError("key without value")
+            v, i = _value(bs, i + 1)
+            if k == b"shape" and v != b"diff":
+                raise DiffError("shape is not diff")
+        elif i < len(bs) and bs[i] == 0x07:
+            j = _skip_layout(bs, i + 1)
+            if j < len(bs) and bs[j] == 0x01:          # dead heading key
+                _, j = _name(bs, j + 1)
+                if j >= len(bs) or bs[j] != 0x1F:
                     raise DiffError("key without value")
-                v, i = _value(bs, i + 1)
-                if k == b"shape" and v != b"diff":
-                    raise DiffError("shape is not diff")
-            elif i < len(bs) and bs[i] == 0x07:
-                j = i + 1
-                while j < len(bs) and bs[j] in LAYOUT:
-                    j += 1
-                if j < len(bs) and bs[j] == 0x01:      # dead heading key
-                    _, j = _value(bs, j + 1)
-                    if j >= len(bs) or bs[j] != 0x1F:
-                        raise DiffError("key without value")
-                    _, i = _value(bs, j + 1)
-                elif j < len(bs) and bs[j] < 0x20 and bs[j] != 0x02:
-                    break                              # dead body element: body's business
-                else:
-                    _, i = _value(bs, j)
+                _, i = _value(bs, j + 1)
+            elif j < len(bs) and bs[j] < 0x20 and bs[j] != 0x02:
+                return i                                 # dead body element: body's business
             else:
-                break
-    cur = None
+                _, i = _value(bs, j)
+        else:
+            return i
+
+
+def _parse_record(bs, i):
+    """After RS. Returns ([(search_part, repl_part)], next i). A unit is
+    (a, a) for an anchor and (old, new) for a substitution."""
+    units = []
+    prev_sub = False
+    while True:
+        a, i = _value(bs, i)
+        i = _skip_notes(bs, i)
+        if i < len(bs) and bs[i] in (0x01, 0x05, 0x10):
+            raise DiffError("keyed unit, reference or level in a diff record")
+        if i < len(bs) and bs[i] == 0x1A:               # supersession
+            j = _skip_layout(bs, i + 1)
+            if j >= len(bs):
+                raise DiffError("SUB at end of input")
+            if bs[j] != 0x1F:
+                raise DiffError("supersession at a grain other than the unit")
+            if prev_sub:
+                raise DiffError("chained supersession")
+            new, i = _value(bs, j + 1)
+            i = _skip_notes(bs, i)
+            if i < len(bs) and bs[i] in (0x01, 0x05, 0x10):
+                raise DiffError("keyed unit, reference or level in a diff record")
+            if i < len(bs) and bs[i] == 0x1A:
+                j = _skip_layout(bs, i + 1)
+                if j < len(bs) and bs[j] == 0x1F:
+                    raise DiffError("chained supersession")
+            if not a and not new:
+                raise DiffError("substitution of nothing by nothing")
+            units.append((a, new)); prev_sub = True
+        else:
+            units.append((a, a)); prev_sub = False
+        if i < len(bs) and bs[i] == 0x1F:
+            i += 1; continue
+        break
+    return units, i
+
+
+def _parse_diff(bs):
+    """→ list of (path, [record]); record = [(search_part, repl_part)]."""
+    i = _skip_layout(bs, 0)
+    if i < len(bs) and bs[i] == 0x16:
+        i = _parse_heading(bs, i + 1)
+    cur = None; files = []
     while i < len(bs):
         x = bs[i]
         if x in LAYOUT:
             i += 1; continue
-        if x == 0x07:                             # note or dead element
-            j = i + 1
-            while j < len(bs) and bs[j] in LAYOUT:
-                j += 1
-            if j >= len(bs):
-                raise DiffError("BEL at end of input")
-            if bs[j] < 0x20 and bs[j] != 0x02:
-                if bs[j] not in (0x1C, 0x1D, 0x1E):
-                    raise DiffError("BEL before a non-element")
-                sub, k = _parse_one(bs, j)       # parsed and dropped
-                i = k; continue
-            _, i = _value(bs, j); continue
+        if x == 0x07:
+            i = _skip_notes(bs, i); continue
         if x == 0x04:
-            i += 1
-            while i < len(bs) and bs[i] in LAYOUT:
-                i += 1
+            i = _skip_layout(bs, i + 1)
             if i < len(bs) and bs[i] not in (0x16, 0x19):
                 raise DiffError("bytes after EOT")
             break
-        if x == 0x17:                             # commit: tolerated
-            i += 1
-            while i < len(bs) and bs[i] in LAYOUT:
-                i += 1
+        if x == 0x17:                                   # commit: tolerated
+            i = _skip_layout(bs, i + 1)
             while i < len(bs) and bs[i] >= 0x20:
                 i += 1
             continue
+        if x == 0x1A:                                   # SUB before FS/GS/RS/SOH
+            raise DiffError("supersession at a grain other than the unit")
         if x == 0x1C:
             path, i = _name(bs, i + 1)
+            if not path:
+                raise DiffError("empty path")
             if any(f[0] == path.decode() for f in files):
                 raise DiffError("same path twice")
             cur = (path.decode(), []); files.append(cur); continue
-        if x in (0x1D, 0x1E):
+        if x == 0x1D:
+            raise DiffError("GS in a diff")
+        if x == 0x01:
+            raise DiffError("header row or keyed unit in a diff")
+        if x == 0x1E:
             if cur is None:
-                raise DiffError("section before any file")
-            op, i = _parse_one(bs, i)
-            cur[1].append(op); continue
+                raise DiffError("record before any file")
+            units, i = _parse_record(bs, i + 1)
+            cur[1].append(units); continue
         raise DiffError("unexpected byte %#x" % x)
     return files
 
 
-def _skip_notes(bs, i):
-    while True:
-        j = i
-        while j < len(bs) and bs[j] in LAYOUT:
-            j += 1
-        if j < len(bs) and bs[j] == 0x07:
-            k = j + 1
-            while k < len(bs) and bs[k] in LAYOUT:
-                k += 1
-            if k < len(bs) and (bs[k] >= 0x20 or bs[k] == 0x02):
-                _, i = _value(bs, k); continue
-        return i
-
-
-def _parse_one(bs, i):
-    x = bs[i]
-    if x == 0x1D:
-        units = []; i += 1
-        while True:
-            a, i = _value(bs, i)
-            if i < len(bs) and bs[i] == 0x1A:
-                b, i = _value(bs, i + 1)
-                units.append((a, b))
-            else:
-                units.append((a, None))
-            i = _skip_notes(bs, i)
-            if i < len(bs) and bs[i] == 0x1F:
-                i += 1; continue
-            break
-        return ("section", units), i
-    if x == 0x1E:
-        old, i = _value(bs, i + 1)
-        if i >= len(bs) or bs[i] != 0x1A:
-            raise DiffError("replace-all without SUB")
-        new, i = _value(bs, i + 1)
-        if not old:
-            raise DiffError("replace-all with empty old")
-        return ("replace", old, new), i
-    if x == 0x1C:
-        path, i = _name(bs, i + 1)
-        return ("file", path), i
-    raise DiffError("unexpected byte %#x" % x)
-
-
-def _apply_file(data, ops):
-    # pass 1: decide section matches on the original bytes
-    cursor = 0; matches = []        # (start, end, replacement)
-    pending_replaces = []           # replaces attached to section index (or -1 for whole file)
-    sec_idx = -1
-    for op in ops:
-        if op[0] == "section":
-            units = op[1]
-            search = b"".join(a for a, _ in units)
-            repl = b"".join(a if b is None else b for a, b in units)
-            if not search:
-                raise DiffError("empty search text")
-            first = data.find(search, cursor)
-            if first < 0:
-                raise DiffError("pattern not found")
-            if data.find(search, first + 1) >= 0:
-                raise DiffError("pattern matched more than once")
-            matches.append((first, first + len(search), repl))
-            cursor = first + len(search); sec_idx += 1
-        else:
-            pending_replaces.append((sec_idx, op[1], op[2]))
-    # scopes: from end of match i to start of match i+1 (or EOF); -1 → 0..start of match 0
-    def scope(idx):
-        lo = 0 if idx < 0 else matches[idx][1]
-        hi = matches[idx + 1][0] if idx + 1 < len(matches) else len(data)
-        return lo, hi
-    # pass 2: build output from pieces: segments between matches get replace-alls
-    pieces = []; pos = 0
-    bounds = [(-1, 0, matches[0][0] if matches else len(data))]
-    for k, (st, en, repl) in enumerate(matches):
-        nxt = matches[k + 1][0] if k + 1 < len(matches) else len(data)
-        bounds.append((k, en, nxt))
-    out = bytearray()
-    seg_text = {}
-    for idx, lo, hi in bounds:
-        seg = data[lo:hi]
-        for sidx, old, new in pending_replaces:
-            if sidx == idx:
-                n = seg.count(old)
-                if n == 0:
-                    raise DiffError("replace-all found nothing")
-                seg = seg.replace(old, new)
-        seg_text[idx] = seg
-    out += seg_text[-1]
-    for k, (st, en, repl) in enumerate(matches):
-        out += repl
-        out += seg_text[k]
+def _apply_file(data, records):
+    cursor = 0; matches = []
+    for units in records:
+        search = b"".join(a for a, _ in units)
+        repl = b"".join(n for _, n in units)
+        if not search:
+            raise DiffError("empty search text")
+        first = data.find(search, cursor)
+        if first < 0:
+            raise DiffError("pattern not found")
+        if data.find(search, first + 1) >= 0:
+            raise DiffError("pattern matched more than once")
+        matches.append((first, first + len(search), repl))
+        cursor = first + len(search)
+    out = bytearray(); pos = 0
+    for st, en, repl in matches:
+        out += data[pos:st]; out += repl; pos = en
+    out += data[pos:]
     return bytes(out)
 
 
 def apply_diff(files, diff_bytes):
     parsed = _parse_diff(diff_bytes)
     result = dict(files)
-    for path, ops in parsed:
+    for path, records in parsed:
         if path not in files:
             raise DiffError("no such file: " + path)
-        result[path] = _apply_file(files[path], ops)
+        result[path] = _apply_file(files[path], records)
     return result
 
 
@@ -735,83 +832,101 @@ def df(name, desc, files, diff, expect=None, error=False):
 
 D = "␖␁shape␟diff"
 df("simple", "One substitution with anchors on both sides",
-   {"greeting.txt": "Hello world!"}, D + "␜greeting.txt␝␂Hello ␃␟world␚universe␟!␄",
+   {"greeting.txt": "Hello world!"}, D + "␜greeting.txt␞␂Hello ␃␟world␚␟universe␟!␄",
    {"greeting.txt": "Hello universe!"})
 df("anchor-before-only", "Anchor on one side is enough when it is unique",
    {"app.rb": "class App\n  def run\n  end\nend\n"},
-   D + "␜app.rb␝␂class App\n  def ␃␟run␚start␄",
+   D + "␜app.rb␞␂class App\n  def ␃␟run␚␟start␄",
    {"app.rb": "class App\n  def start\n  end\nend\n"})
-df("two-substitutions", "Several substitutions in one pattern",
-   {"m.txt": "x = 10 + 5\n"}, D + "␜m.txt␝␂x = ␃␟10␚20␟␂ + ␃␟5␚15␄",
+df("two-substitutions", "Several substitutions in one record",
+   {"m.txt": "x = 10 + 5\n"}, D + "␜m.txt␞␂x = ␃␟10␚␟20␟␂ + ␃␟5␚␟15␄",
    {"m.txt": "x = 20 + 15\n"})
-df("insertion", "An empty old part inserts",
-   {"a.py": "import os\nprint(1)\n"}, D + "␜a.py␝␂import os␃␟␚␂\nimport sys␃␄",
+df("insertion", "An empty old inserts after its anchor",
+   {"a.py": "import os\nprint(1)\n"}, D + "␜a.py␞␂import os␃␟␚␟␂\nimport sys␃␄",
    {"a.py": "import os\nimport sys\nprint(1)\n"})
-df("deletion", "An empty new part deletes",
-   {"a.txt": "keep # TODO remove\n"}, D + "␜a.txt␝␂ # TODO remove␃␚␄",
+df("deletion", "An empty new deletes",
+   {"a.txt": "keep # TODO remove\n"}, D + "␜a.txt␞␂ # TODO remove␃␚␟␄",
    {"a.txt": "keep\n"})
-df("assertion", "A section with no substitution asserts and moves the cursor",
-   {"a.txt": "one\ntwo\none\n"}, D + "␜a.txt␝two␝one␚uno␄",
+df("assertion", "A record with no substitution asserts and moves the cursor",
+   {"a.txt": "one\ntwo\none\n"}, D + "␜a.txt␞two␞one␚␟uno␄",
    {"a.txt": "one\ntwo\nuno\n"})
-df("sequential-sections", "Each section is searched after the previous match, so a later 'a' is unambiguous",
-   {"a.txt": "a b\na c\n"}, D + "␜a.txt␝␂a b␃␚X␝a␚Z␄", {"a.txt": "X\nZ c\n"})
+df("sequential-records", "Each record is searched after the previous match, so a later 'a' is unambiguous",
+   {"a.txt": "a b\na c\n"}, D + "␜a.txt␞␂a b␃␚␟X␞a␚␟Z␄", {"a.txt": "X\nZ c\n"})
 df("ambiguous-after-cursor", "Exactly once means once in the text after the cursor",
-   {"a.txt": "a b a b\n"}, D + "␜a.txt␝a␚A␄", error=True)
+   {"a.txt": "a b a b\n"}, D + "␜a.txt␞a␚␟A␄", error=True)
 df("anchor-mismatch", "An anchor that does not match byte for byte (here, extra indentation) refuses",
    {"c.cr": "def run\n  return 0\nend\n"},
-   D + "␜c.cr␝␂  def run\n␃␟␂  return 0␃␚␂  return 1␃␄",
+   D + "␜c.cr␞␂  def run\n␃␟␂  return 0␃␚␟␂  return 1␃␄",
    error=True)
 df("multiline-text-anchor-ok", "The anchor must match the file's bytes exactly",
    {"c.cr": "def run\n  return 0\nend\n"},
-   D + "␜c.cr␝␂def run\n␃␟␂  return 0␃␚␂  return 1␃␄",
+   D + "␜c.cr␞␂def run\n␃␟␂  return 0␃␚␟␂  return 1␃␄",
    {"c.cr": "def run\n  return 1\nend\n"})
-df("replace-all-in-scope", "RS replaces every occurrence between this section's match and the next",
+df("expanded-replace-all", "Replace-all is written out: one anchored record per occurrence, in order",
    {"t.rb": "count = 0\ndef tally(items)\n  count = 0\n  items.each { count += 1 }\n  count\nend\ncount\n"},
-   D + "␜t.rb␝def tally(items)␞count␚total␝end␄",
+   D + "␜t.rb␞def tally(items)␞␂  ␃␟count␚␟total␟␂ = 0␃␞␂{ ␃␟count␚␟total␟␂ +=␃␞␂  ␃␟count␚␟total␟␂\nend␃␄",
    {"t.rb": "count = 0\ndef tally(items)\n  total = 0\n  items.each { total += 1 }\n  total\nend\ncount\n"})
-df("replace-all-to-eof", "After the last section the scope runs to the end of the file",
-   {"a.txt": "x\n--\nx x\n"}, D + "␜a.txt␝--␞x␚y␄", {"a.txt": "x\n--\ny y\n"})
-df("replace-all-whole-file", "RS before any section applies to the whole file (up to the first match)",
-   {"a.txt": "x x\n--\nx\n"}, D + "␜a.txt␞x␚y␝--␄", {"a.txt": "y y\n--\nx\n"})
-df("replace-all-in-order", "Several RS lines apply in order",
-   {"a.txt": "--\na a\n"}, D + "␜a.txt␝--␞a␚b␞b␚c␄", {"a.txt": "--\nc c\n"})
 df("two-files", "Several files in one diff",
-   {"a.txt": "foo\n", "b.txt": "bar\n"}, D + "␜a.txt␝foo␚FOO␜b.txt␝bar␚BAR␄",
+   {"a.txt": "foo\n", "b.txt": "bar\n"}, D + "␜a.txt␞foo␚␟FOO␜b.txt␞bar␚␟BAR␄",
    {"a.txt": "FOO\n", "b.txt": "BAR\n"})
-df("note-and-dead-section", "A note is skipped; a dead section is parsed and ignored",
-   {"a.txt": "foo bar\n"}, D + "␜a.txt␇ careful␝foo␚FOO␇␝bar␚BAR␄", {"a.txt": "FOO bar\n"})
+df("note-between-records", "A note between records is skipped",
+   {"a.txt": "foo bar\n"}, D + "␜a.txt␇ careful␞foo␚␟FOO␄", {"a.txt": "FOO bar\n"})
+df("note-holds-hunk", "A hunk kept without applying is written inside a text note",
+   {"a.txt": "foo bar\n"}, D + "␜a.txt␞foo␚␟FOO␇␂␞bar␚␟BAR␃␄", {"a.txt": "FOO bar\n"})
 df("no-match", "A pattern that matches nothing refuses the whole diff",
-   {"a.txt": "foo\n", "b.txt": "bar\n"}, D + "␜a.txt␝foo␚FOO␜b.txt␝baz␚BAZ␄", error=True)
+   {"a.txt": "foo\n", "b.txt": "bar\n"}, D + "␜a.txt␞foo␚␟FOO␜b.txt␞baz␚␟BAZ␄", error=True)
 df("ambiguous", "A pattern that matches twice refuses",
-   {"a.txt": "foo foo\n"}, D + "␜a.txt␝foo␚FOO␄", error=True)
-df("replace-all-nothing", "A replace-all with zero occurrences refuses",
-   {"a.txt": "--\nfoo\n"}, D + "␜a.txt␝--␞bar␚baz␄", error=True)
-df("replace-all-empty-old", "A replace-all needs a non-empty old part",
-   {"a.txt": "--\n"}, D + "␜a.txt␝--␞␚x␄", error=True)
+   {"a.txt": "foo foo\n"}, D + "␜a.txt␞foo␚␟FOO␄", error=True)
+df("bare-insertion", "An insertion needs an anchor: empty search text refuses",
+   {"a.txt": "--\n"}, D + "␜a.txt␞␚␟x␄", error=True)
+df("empty-record", "An empty record has empty search text and refuses",
+   {"a.txt": "--\n"}, D + "␜a.txt␞␄", error=True)
+df("empty-substitution", "A substitution of nothing by nothing refuses",
+   {"a.txt": "ab\n"}, D + "␜a.txt␞a␟␚␟␟b␄", error=True)
 df("wrong-shape", "A heading that contradicts the diff tool refuses",
-   {"a.txt": "foo\n"}, "␖␁shape␟stream␜a.txt␝foo␚bar␄", error=True)
-df("dead-file-line", "A dead FS kills only the path line; what follows attaches to the previous file",
-   {"a.txt": "foo baz\n"}, D + "␜a.txt␝foo␚FOO␇␜b.txt␝baz␚BAZ␄", {"a.txt": "FOO BAZ\n"})
-df("dead-section-replace-attaches", "RS lines after a dead GS attach to the previous live section",
-   {"a.txt": "A x\nC x\n"}, D + "␜a.txt␝A␇␝C␞x␚y␄", {"a.txt": "A y\nC y\n"})
-df("text-note-in-body", "A text note between lines is skipped",
-   {"a.txt": "foo\n"}, D + "␜a.txt␇␂note ␞ with codes␃␝foo␚bar␄", {"a.txt": "bar\n"})
+   {"a.txt": "foo\n"}, "␖␁shape␟stream␜a.txt␞foo␚␟bar␄", error=True)
+df("dead-record-refused", "A dead record is an error in a diff: what is written applies",
+   {"a.txt": "foo bar\n"}, D + "␜a.txt␞foo␚␟FOO␇␞bar␚␟BAR␄", error=True)
+df("dead-file-line-refused", "A dead file line is an error in a diff",
+   {"a.txt": "foo baz\n"}, D + "␜a.txt␞foo␚␟FOO␇␜b.txt␞baz␚␟BAZ␄", error=True)
+df("text-note-in-body", "A text note between records is skipped",
+   {"a.txt": "foo\n"}, D + "␜a.txt␇␂note ␞ with codes␃␞foo␚␟bar␄", {"a.txt": "bar\n"})
 df("note-in-pattern", "A note after a unit is not a unit",
-   {"a.txt": "ab\n"}, D + "␜a.txt␝a␇n␟b␚c␄", {"a.txt": "ac\n"})
-df("commit-tolerated", "An ETB between lines is a no-op",
-   {"a.txt": "foo\n"}, D + "␜a.txt␝foo␚bar␗␄", {"a.txt": "bar\n"})
+   {"a.txt": "ab\n"}, D + "␜a.txt␞a␇n␟b␚␟c␄", {"a.txt": "ac\n"})
+df("note-after-substitution", "A note after a superseding unit is a note",
+   {"a.txt": "ab\n"}, D + "␜a.txt␞a␟b␚␟c␇n␄", {"a.txt": "ac\n"})
+df("commit-tolerated", "An ETB between records is a no-op",
+   {"a.txt": "foo\n"}, D + "␜a.txt␞foo␚␟bar␗␄", {"a.txt": "bar\n"})
 df("overlapping-ambiguous", "Matches are counted at every position: aa occurs twice in aaa",
-   {"a.txt": "aaa\n"}, D + "␜a.txt␝aa␚b␄", error=True)
+   {"a.txt": "aaa\n"}, D + "␜a.txt␞aa␚␟b␄", error=True)
 df("same-path-twice", "The same path twice in one diff refuses",
-   {"a.txt": "foo bar\n"}, D + "␜a.txt␝foo␚FOO␜a.txt␝bar␚BAR␄", error=True)
+   {"a.txt": "foo bar\n"}, D + "␜a.txt␞foo␚␟FOO␜a.txt␞bar␚␟BAR␄", error=True)
 df("bytes-after-eot", "Bytes after EOT refuse",
-   {"a.txt": "foo bar\n"}, D + "␜a.txt␝foo␚FOO␄␝bar␚BAR", error=True)
+   {"a.txt": "foo bar\n"}, D + "␜a.txt␞foo␚␟FOO␄␞bar␚␟BAR", error=True)
 df("text-path", "A path is a name, never text",
-   {"a.txt": "foo\n"}, D + "␜␂a.txt␃␝foo␚bar␄", error=True)
+   {"a.txt": "foo\n"}, D + "␜␂a.txt␃␞foo␚␟bar␄", error=True)
+df("empty-path", "A path is never empty",
+   {"a.txt": "foo\n"}, D + "␜␞foo␚␟bar␄", error=True)
 df("dead-heading-key", "A dead heading key is ignored; the FS after it is live",
-   {"a.txt": "foo\n"}, "␖␁shape␟diff␇␁x␟y␜a.txt␝foo␚bar␄", {"a.txt": "bar\n"})
+   {"a.txt": "foo\n"}, "␖␁shape␟diff␇␁x␟y␜a.txt␞foo␚␟bar␄", {"a.txt": "bar\n"})
 df("missing-file", "A path that does not exist refuses",
-   {"a.txt": "foo\n"}, D + "␜b.txt␝foo␚bar␄", error=True)
+   {"a.txt": "foo\n"}, D + "␜b.txt␞foo␚␟bar␄", error=True)
+df("record-before-file", "A record before the first FS refuses",
+   {"a.txt": "foo\n"}, D + "␞foo␚␟bar␜a.txt␄", error=True)
+df("gs-refused", "GS has no meaning in a diff and refuses",
+   {"a.txt": "foo\n"}, D + "␜a.txt␝s␞foo␚␟bar␄", error=True)
+df("header-row-refused", "A header row refuses",
+   {"a.txt": "foo\n"}, D + "␜a.txt␁␞x␞foo␚␟bar␄", error=True)
+df("keyed-unit-refused", "A keyed unit refuses",
+   {"a.txt": "foo\n"}, D + "␜a.txt␞␁k␟foo␚␁k␟bar␄", error=True)
+df("level-refused", "A level refuses",
+   {"a.txt": "foo\n"}, D + "␜a.txt␞␐␞foo␘␚␟bar␄", error=True)
+df("reference-refused", "A reference refuses",
+   {"a.txt": "foo\n"}, D + "␜a.txt␞␅foo␚␟bar␄", error=True)
+df("chained-supersession-refused", "A chained supersession refuses: the file never held the middle",
+   {"a.txt": "foo\n"}, D + "␜a.txt␞foo␚␟bar␚␟baz␄", error=True)
+df("record-grain-refused", "Supersession at the record grain is reserved and refuses",
+   {"a.txt": "foo\n"}, D + "␜a.txt␞foo␚␞bar␄", error=True)
 
 # ------------------------------------------------------------------ write
 for fname, cases in [("decode", decode), ("encode", encode),
