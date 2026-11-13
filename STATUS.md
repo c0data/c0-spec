@@ -114,9 +114,23 @@ package version.
    GRAMMAR.md and DESIGN.md are rewritten: no `diff-body`, supersession in
    the base grammar, the diff a body under constraints; `vectors/diff.json`
    regenerated (41 cases) with `supersede-*` decode, canonical and invalid
-   cases. **Crystal is ported (`ed4db5a`, 2026-11-12); JS, Rust, Go and C
-   are being ported (started 2026-11-13), Python and Ruby follow over
-   the C core** and must: parse SUB as a
+   cases. **Ported 2026-11-12/13: Crystal `83b043c`, JS `0870562`, Rust
+   `fa4fd25`, Go `558ba0a`, C `a831885` (all 277 vectors green in each, none
+   pushed, no version bump); Python and Ruby are being ported over the C
+   core (started 2026-11-13).** Settled while porting: a body whose every
+   element is dead is an empty body and reports one empty leading file
+   (`␇␜b␞2`: files never empty). OPEN, found by the ports, to decide
+   (recommendations in the session report): (a) the scope of `␚␝`: Crystal,
+   JS, Rust and Go take "no earlier group at that depth" literally and let
+   `␝a␝␝b␝c␚␝␝d` make d supersede b across parents; C supersedes only the
+   previous live sibling (since the last live group at a shallower depth)
+   and refuses that input; (b) a dead level inside a diff unit
+   (`␞foo␟␇␐␞a␘␚␟bar`) is not counted as a dead element by any parser, so
+   every port accepts it as an insertion while DIFF.md refuses dead
+   records and file lines; (c) a SYN mid-stream after uncommitted bytes
+   (`␞a␖␁shape␟stream␗`): DESIGN.md says the SYN tears them, C tears them,
+   Crystal (and the ports mirroring its reader) deliver `a`; no vector for
+   any of the three. Every port must: parse SUB as a
    qualifier (tokenizer), report superseded elements and the result
    (Document model), drop the diff grammar branch, rewrite the diff module
    (JS, Rust, Go, C), plus the earlier items below (dead elements
