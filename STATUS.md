@@ -98,6 +98,15 @@ package version.
   (`rs()`/`rs_value(v)`); Go uses variadics.
 - Go and Rust have no hash-taking `map`/`syn`; use `key`/`heading`
   chains, because their maps are unordered and key order is data.
+- **Parse is validate (decided 2026-11-13).** Constructing a document or
+  body from bytes applies the whole grammar to every unit and level and
+  fails on malformed input: there is no model for a record the grammar
+  rejects, and the stream reader finds a damaged block by the parser
+  failing inside it. Canonical checking is opt-in (a validator entry
+  point or flag) and never fails construction; it reports violations.
+  Two severities, as DESIGN.md says. Before Crystal `ed4db5a` the model
+  only indexed structure and let malformed units through to the
+  accessors; that leniency is gone in every port.
 
 ## What is open
 
@@ -105,8 +114,9 @@ package version.
    GRAMMAR.md and DESIGN.md are rewritten: no `diff-body`, supersession in
    the base grammar, the diff a body under constraints; `vectors/diff.json`
    regenerated (41 cases) with `supersede-*` decode, canonical and invalid
-   cases. **Crystal is ported (`ed4db5a`, 2026-11-12); the other six are
-   behind the spec** and must: parse SUB as a
+   cases. **Crystal is ported (`ed4db5a`, 2026-11-12); JS, Rust, Go and C
+   are being ported (started 2026-11-13), Python and Ruby follow over
+   the C core** and must: parse SUB as a
    qualifier (tokenizer), report superseded elements and the result
    (Document model), drop the diff grammar branch, rewrite the diff module
    (JS, Rust, Go, C), plus the earlier items below (dead elements
