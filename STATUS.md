@@ -115,9 +115,12 @@ package version.
    the base grammar, the diff a body under constraints; `vectors/diff.json`
    regenerated (41 cases) with `supersede-*` decode, canonical and invalid
    cases. **Ported 2026-11-12/13: Crystal `83b043c`, JS `0870562`, Rust
-   `fa4fd25`, Go `558ba0a`, C `a831885` (all 277 vectors green in each, none
-   pushed, no version bump); Python and Ruby are being ported over the C
-   core (started 2026-11-13).** Settled while porting: a body whose every
+   `fa4fd25`, Go `558ba0a`, C `a831885`, Python `19b7c09`, Ruby `4cb748f` (all 277
+   vectors green in each, none pushed, no version bump; Python and Ruby
+   over C core `a831885`). ALL SEVEN PORTED 2026-11-13.** Library
+   inconsistency to align: `Heading#schema` returns raw bytes in Crystal
+   but the parsed form (name bytes, or the keyed level as a record/body)
+   in Python and Ruby. Settled while porting: a body whose every
    element is dead is an empty body and reports one empty leading file
    (`␇␜b␞2`: files never empty). OPEN, found by the ports, to decide
    (recommendations in the session report): (a) the scope of `␚␝`: Crystal,
