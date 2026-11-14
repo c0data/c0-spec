@@ -110,6 +110,13 @@ package version.
 
 ## What is open
 
+0. **Supersession is being withdrawn; SUB GS becomes depth (direction
+   agreed 2026-11-14).** `notes/PROPOSAL-SUB-DEPTH.md` has the grammar, the
+   DIFF.md respelling by position (units in threes), every vector's fate
+   and the port deletions; its open points are to be taken one by one
+   before anything is edited. Until then item 1 below describes what is
+   built in all seven ports (c0-spec 7b13feb), not where the spec is going.
+
 1. **C0DIFF review: decided and written, 2026-11-12.** DIFF.md,
    GRAMMAR.md and DESIGN.md are rewritten: no `diff-body`, supersession in
    the base grammar, the diff a body under constraints; `vectors/diff.json`
