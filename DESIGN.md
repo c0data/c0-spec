@@ -60,7 +60,7 @@ This revision (2026-10) is the pre-1.0 redesign. Its reasoning is recorded in
 | 0x17 | ETB  | ␗     | Commit marker (stream mode block terminator)             |
 | 0x18 | CAN  | ␘     | Close a nested level                                     |
 | 0x19 | EM   | ␙     | End of medium: a raw blob follows to end of container    |
-| 0x1A | SUB  | ␚     | Supersede: the element before the next separator is replaced by the one after |
+| 0x1A | SUB  | ␚     | Depth: each SUB before a GS puts the group one level deeper |
 | 0x1C | FS   | ␜     | File separator                                           |
 | 0x1D | GS   | ␝     | Group / table / section separator                        |
 | 0x1E | RS   | ␞     | Record / row separator                                   |
@@ -237,7 +237,7 @@ outside text:
 So a plain value never carries edge whitespace, `␞Alice ␟Bob` is `Alice` and
 `Bob`, and a value whose edge spaces matter, or that holds any control code,
 is text (see Text). Layout never changes the meaning of the codes around
-it: `␁ ␞` is still a header row and `␝ ␝` is still depth two. Inside a
+it: `␁ ␞` is still a header row and `␚ ␝` is still depth two. Inside a
 nested level the same rule applies, so nested structure can be laid out over
 indented lines. Bytes at or above 0x80, non-breaking spaces included, are
 data.
@@ -327,7 +327,7 @@ group at the start of a file or of a nested level, after any notes, dead
 elements or commits; a header row anywhere else, live or dead, is an
 error. A header row is a record of names and admits notes as any record
 does: `␁␞name␇n␟amount` names two fields. It names
-the fields of the positional records of its own group; a GS-repeated
+the fields of the positional records of its own group; a deeper
 subsection inherits nothing and names its own fields with its own header
 row, or has none. A keyed record under a
 header row is legal and names its own. The format does not check that a
@@ -474,7 +474,7 @@ target:
 | Step | Written | Names |
 |---|---|---|
 | file | `␜a` | the file `a` |
-| group | `␝tags`, `␝␝intro` | a group; GS repetition is depth, as in the document |
+| group | `␝tags`, `␚␝intro` | a group; SUB before GS is depth, as in the document |
 | record | `␞001` | the positional record whose record id is `001` |
 | field | `␞001␟label` | that record's field under the header name `label` |
 | keyed unit | `␞␁host␟` | the keyed unit `host`; its value is left empty |
@@ -482,7 +482,7 @@ target:
 
     ␅␐␝tags␘                       the group tags; legal, not canonical (␅tags)
     ␅␐␜b␝tags␞001␘                 record 001 of tags in file b
-    ␅␐␝docs␝␝intro␞3␘              record 3 of docs' subsection intro
+    ␅␐␝docs␚␝intro␞3␘              record 3 of docs' subsection intro
     ␅␐␝server␞␁host␟␘              the keyed unit host in server
     ␅␐␝tags␞001␟children␟␐␞2␘␘     record 2 inside the level in field children of record 001
 
@@ -568,9 +568,11 @@ Layout between the BEL and the code is layout, as everywhere: `␇␊␞port` is
 a dead record. A note has content: a BEL directly followed by a code is
 always the dead marker, so `␇␇␞x` is an error (BEL is not an element), and
 a BEL at the end of input is an error. The codes that may follow a BEL are
-FS, GS, RS, SOH, DLE and plain or text content; before any other code (US,
-ETX, CAN, ENQ, SUB, ETB, EOT, SYN, EM) a BEL is an error: those are not
-elements, and framing cannot be commented out.
+FS, GS, SUB (a group line with its depth prefix: `␇␚␝b` is a dead group
+at depth two, the prefix dying with the line, and `␚␇␝b` is an error), RS,
+SOH, DLE and plain or text content; before any other code (US, ETX, CAN,
+ENQ, ETB, EOT, SYN, EM) a BEL is an error: those are not elements, and
+framing cannot be commented out.
 
 **A note is never a unit.** Wherever a note sits, the reader skips it and
 the structure around it is what the codes say: `␞Alice␟␇old␟100` has two
@@ -583,83 +585,60 @@ comments is a tool option, not a reader rule; canonicalisation strips
 notes and dead elements alike.
 
 
-## Supersession (SUB)
+## Depth (SUB)
 
-**SUB (0x1A)** outside text, immediately before US, SOH, RS, GS or FS,
-marks the element before that code as **superseded** by the element after
-it, at the grain of that code:
+**SUB (0x1A)** outside text stands only before GS, and each one puts the
+group a level deeper: `␝a` is a group at depth one, `␚␝b` at depth two,
+`␚␚␝c` at depth three. Depth is a count of SUB, read forward. Layout may
+follow each SUB as it follows every code, so `␚ ␚ ␝c` is depth three in
+pretty form.
 
-    ␞old␚␟new          the unit before is superseded by the unit after
-    ␞␁k␟v␚␁k␟w         the keyed unit before, by the keyed unit after
-    ␞a␟b␚␞a␟c          the record before, by the record after
-    ␝g␞x␚␝g␞y          the group before, at that depth, by the group after
-    ␜f␝g␞x␚␜f␝g␞y      the file before, by the file after
+    ␝Chapter 1          depth 1
+    ␚␝Section 1.1       depth 2
+    ␚␚␝Topic 1.1.1      depth 3
+    ␝Chapter 2          depth 1
 
-The superseded element was wrong; the superseding one stands in its
-place. This is SUB's 1963 meaning, "replace the character found to be
-erroneous", lifted from the character to the element, and it pairs with
-BEL: `␇␞` kills what follows, known before writing; `␚␞` replaces what
-precedes, found out after. SUB before any other byte, at the end of input,
-or next to BEL is an error, and the slot stays reserved.
+SUB's 1963 meaning is "substitute": the character so marked stands in for
+another. Lifted to C0DATA it reads as *subordinate*: the group so marked
+stands under the one before it. Repeating GS for depth was the first
+design, and it collided with the rule every other code obeys, that a
+repeated code is an empty element (`␟␟` an empty unit, `␞␞` an empty
+record): under it `␝␝b` could not be an empty-named group followed by
+`b`, and canonicalisers had to refuse to bring two GS together. With
+depth on SUB the rule holds for GS too: `␝␝b` is group `""` then group
+`b`, and nothing is refused.
 
-**What a reader does.** It hands both elements on, in order, with the fact
-that the second supersedes the first; it never takes anything back,
-because it streams. What to do with the fact is the consumer's: a document
-model drops the superseded node as it builds the tree, so `␞a␟b␚␟␟c` is
-the record `a`, `""`, `c`; a diff applier keeps both as search and
-replacement; a tool showing an edited copy shows both.
+**No skipping.** A group's depth is at most one more than the depth of
+the group line before it in the same file, dead or not, and the first
+group line of a file is at depth one; FS restarts the count. A deeper
+group line is an error, "depth skipped": `␝a␚␚␝c` and `␜f␚␝g` are refused,
+and a reader never invents a nameless section to stand between. The rule
+counts dead group lines as written, so killing a section with its
+subsections is one BEL:
 
-**Empty sides.** An empty unit is nothing between two codes, so no `␂␃`
-is ever needed:
+    ␝x␇␚␝draft␚␚␝notes␝y      draft and notes die together; x and y remain
 
-    ␞old␚␟new␞end      record 1 [old → new], record 2 [end]
-    ␞old␚␟␞end         record 1 [old → ""], a deletion; record 2 [end]
-    ␞␚␟new             record 1 ["" → new], an insertion
-    ␞a␟b␚␟␟c           [a, b → "", c]: three units in the result
+`notes` is one deeper than `draft`, which is fine, and dies with it, since
+a dead group takes everything under it (Comments). Stripping dead groups
+can never create a skip: a dead group at depth d takes every deeper group
+after it, so the next surviving group is at depth d or less.
 
-**Arity.** "N separators, N+1 units" counts what was written; the result
-of a record omits its superseded units. Supersessions chain: `␞a␚␟b␚␟c` is
-`[c]`, with `a` and `b` both handed on.
+**BEL and SUB.** BEL kills the whole group line, prefix included: `␇␚␝b`
+is a dead group at depth two. `␚␇␝b` is an error, as is SUB before any
+other byte or at the end of input: SUB has one meaning and one place.
 
-**Nothing to supersede.** A unit always has a predecessor, since the first
-unit of a record exists even when empty. A record, group, file or keyed
-unit does not: `␝g␚␞x` with no record before it in the group is an error,
-as is `␚␝` with no earlier group at that depth, `␚␜` with no earlier file,
-and `␚␁` as the first keyed unit of a record.
-
-**Where it is legal.** Everywhere the grammar admits the code that follows
-it, the heading included; a header row's names are not units and admit
-none. The meaning is the base grammar's and does not vary by shape; a
-shape says which grains it allows (C0DIFF: the unit grain only).
-
-**Canonical form and hashing.** Supersession is content: a document that
-says "this, superseded by that" is a different document from one that
-says only "that". Canonical form keeps it and hashes it as written, each
-side in its one spelling. The deciding case is the diff: a C0DIFF document
-is made of supersessions, and if canonical form applied them,
-canonicalising `␞␂Hello ␃␟world␚␟universe␟!` would leave
-`␞␂Hello ␃␟universe␟!`, the replacement alone; the diff would be gone and
-its content hash would be the hash of its output. The rule has one
-meaning, so canonical form cannot apply it in one shape and keep it in
-another. It therefore differs from BEL, which canonical form strips: a
-note is outside the data, a supersession is a statement about it. The
-cost falls on data documents: a log corrected in band (`␞Bob␟340.00␗`
-then `␚␞Bob␟350.00␗`) and one written right the first time have different
-content hashes. A tool that wants the corrected data, or its hash, takes
-a reading, as it takes the live records of a document with dead ones. The
-ETB digest is unaffected: it covers each block's bytes as written, so the
-correction is covered by its own block and the block it corrects stays
-verifiable.
+**Canonical form.** The prefix is structure, not layout, and is kept as
+written; `␚␝b` and `␝b` are different documents.
 
 
-## Document Mode (Depth via GS Repetition)
+## Document Mode (Depth via SUB)
 
-For hierarchical documents (like Markdown headings), GS is repeated to
-indicate depth:
+For hierarchical documents (like Markdown headings), SUB before GS
+indicates depth:
 
     ␝         = depth 1   (like #)
-    ␝␝        = depth 2   (like ##)
-    ␝␝␝       = depth 3   (like ###)
+    ␚␝        = depth 2   (like ##)
+    ␚␚␝       = depth 3   (like ###)
 
 Within a section, RS marks a content block (paragraph) and US marks
 sub-elements (list items) within that block.
@@ -668,26 +647,18 @@ sub-elements (list items) within that block.
     ␝Chapter 1
     ␞First paragraph of chapter one.
     ␞Second paragraph.
-    ␝␝Section 1.1
+    ␚␝Section 1.1
     ␞A list of items:␟First item␟Second item␟Third item
-    ␝␝␝Subsection 1.1.1
+    ␚␚␝Subsection 1.1.1
     ␞Deep content, kept exactly:␟␂    indented
       code␃
     ␝Chapter 2
     ␞And so on.
     ␄
 
-Repetition is read the same in every shape: `␝␝g` is group `g` at depth
-two. A depth may be skipped (`␝a␝␝␝c`): `c` is at depth three and no
-group stands at depth two; a reader reports what is written and invents
-nothing. A header row belongs to the group line it follows, not to its
-subsections (see The header row). **Limitation:** an empty-named group cannot be followed directly by
-another group, since the bytes would read as depth; in a document with
-several groups, name them. The limitation is on canonical bytes: `␝␇n␝b`
-is two groups at depth one, with a note between the GS, and stripping the
-note would leave `␝␝b`, one group at depth two. A canonicaliser or
-encoder that would bring two GS together refuses, as a formatter refuses
-a value that collides with its glyphs; it never changes depth.
+Depth is read the same in every shape: `␚␝g` is group `g` at depth two,
+and a depth is never skipped (see Depth). A header row belongs to the
+group line it follows, not to its subsections (see The header row).
 
 
 ## Key-Value Configuration
@@ -784,7 +755,7 @@ defined, and none is a unit of a record.
   text, nested levels and notes inside it included, the RS itself
   excluded.
 - **Group** — from its GS through its records and deeper sections (name,
-  header row and GS-repeated subsections included), up to the next GS at
+  header row and deeper subsections included), up to the next GS at
   the group's own depth or shallower, FS, or framing byte.
 - **Document** — the body: from the first byte after the heading to the
   last content byte.
@@ -1002,12 +973,12 @@ C0DATA is a system, not a single format. The same vocabulary expresses:
 | Shape      | Primary Codes Used              | Analogous To          |
 |------------|---------------------------------|-----------------------|
 | Tabular    | FS, GS, SOH RS, RS, US          | CSV, SQL results      |
-| Document   | FS, GS×N, RS, US                | Markdown, outlines    |
+| Document   | FS, SUB GS, RS, US              | Markdown, outlines    |
 | Key-Value  | GS, RS, SOH                     | TOML, INI             |
 | Nested     | DLE … CAN, any inner codes      | JSON objects, arrays  |
 | Text       | STX/ETX                         | quoted strings, blobs in transit |
 | Reference  | ENQ, a level pattern for paths  | foreign keys, links   |
-| Diff       | FS, RS, US, SUB                 | unified diff, patches |
+| Diff       | FS, RS, US                      | unified diff, patches |
 | Stream     | RS, US, ETB                     | NDJSON, SSE, WAL      |
 | Container  | SYN heading, EM                 | tar, zip, PDF streams |
 

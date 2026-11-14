@@ -29,7 +29,7 @@ full specification and future directions.
 | 0x17 | ETB | ␗ | Commit marker (stream mode) |
 | 0x18 | CAN | ␘ | Close a nested level |
 | 0x19 | EM  | ␙ | End of medium: raw blob follows |
-| 0x1A | SUB | ␚ | Supersede: the element before the next separator is replaced by the one after |
+| 0x1A | SUB | ␚ | Depth: each SUB before a GS puts the group one level deeper |
 | 0x1C | FS  | ␜ | File separator |
 | 0x1D | GS  | ␝ | Group / Table / Section separator |
 | 0x1E | RS  | ␞ | Record / Row separator |
@@ -143,12 +143,12 @@ expresses multiple common data shapes.
 | Shape      | Primary Codes Used          | Analogous To         |
 |------------|-----------------------------|----------------------|
 | Tabular    | FS, GS, SOH RS, RS, US     | CSV, SQL results     |
-| Document   | FS, GS×N, RS, US           | Markdown, outlines   |
+| Document   | FS, SUB GS, RS, US         | Markdown, outlines   |
 | Key-Value  | GS, RS, SOH                | TOML, INI            |
 | Nested     | DLE … CAN, any inner codes | JSON objects, arrays |
 | Text       | STX/ETX                    | quoted strings       |
 | Reference  | ENQ, a level pattern for paths | foreign keys, links  |
-| Diff       | FS, RS, US, SUB            | unified diff, patches|
+| Diff       | FS, RS, US                 | unified diff, patches|
 | Stream     | RS, US, ETB                | NDJSON, SSE, WAL     |
 | Container  | SYN heading, EM            | tar, zip             |
 
@@ -221,9 +221,10 @@ record; a level may even hold groups and files.
 `␐␘` is an empty level; `␐␞␘` is a list holding one empty string. DLE is
 on the opener only, and must be followed by a code.
 
-### Document (FS wrapper, depth via GS repetition)
+### Document (FS wrapper, depth via SUB GS)
 
-GS repeated indicates depth level (like # in Markdown). Within a section,
+SUB before GS indicates depth (like # in Markdown): `␝` is depth one,
+`␚␝` depth two, `␚␚␝` depth three; a depth is never skipped. Within a section,
 RS marks a content block (paragraph) and US marks sub-elements (list items).
 
 ```
@@ -231,7 +232,7 @@ RS marks a content block (paragraph) and US marks sub-elements (list items).
   ␝Chapter 1
     ␞First paragraph.
     ␞A list:␟Item one␟Item two
-    ␝␝Section 1.1
+    ␚␝Section 1.1
       ␞Nested content.
   ␝Chapter 2
     ␞And so on.
@@ -259,8 +260,8 @@ written in the document's own codes, so a reader parses it as any level:
 ```
 
 Group `tags`, the record whose first field is `001`, its field under the
-header name `label`. A file line names the file (`␅␐␜b␝tags␞001␘`), GS
-repetition is depth (`␅␐␝docs␝␝intro␞3␘`), a keyed unit is named with its
+header name `label`. A file line names the file (`␅␐␜b␝tags␞001␘`), SUB
+before GS is depth (`␅␐␝docs␚␝intro␞3␘`), a keyed unit is named with its
 value left empty (`␅␐␝server␞␁host␟␘`), and a level in the third unit
 continues into the field's level (`␅␐␝tags␞001␟children␟␐␞2␘␘`). Every
 name is plain; text, header rows, dead elements and a second branch are

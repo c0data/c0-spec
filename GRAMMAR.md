@@ -54,13 +54,13 @@ never changes what follows a code.
 ## Heading and body
 
     heading   = *( hunit / note )
-    hunit     = [ BEL L / sup ] SOH L name L US L [ hvalue ]
+    hunit     = [ BEL L ] SOH L name L US L [ hvalue ]
 
     body      = part *( file-line part )
-    file-line = [ BEL L / sup ] FS L name L
+    file-line = [ BEL L ] FS L name L
     part      = *pre [ header-row ] *item *group
     group     = group-line *pre [ header-row ] *item
-    group-line = [ BEL L / sup ] 1*( GS L ) name L
+    group-line = [ BEL L ] *( SUB L ) GS L name L
     pre       = note / commit / dead-record / dead-header
     item      = record / dead-record / note / commit
     dead-record = BEL L RS L ( keyed / positional )
@@ -75,14 +75,17 @@ item of a part, a group or a level, after any notes, commits or dead
 elements; anywhere else a header row, live or dead, is an error, which
 is why `dead-header` occurs only in `pre`. A dead group line opens a dead
 group and a dead file line a dead file: what they hold is parsed and
-discarded with them. `GS L GS` is depth two;
-an empty-named group therefore cannot directly precede another group.
-Stripping what stands between two GS (a note, a dead element, a commit)
-can bring them together: `␝␇n␝b` is two groups at depth one, `␝␝b` one
-group at depth two. A canonicaliser or encoder that would write two GS
-in a row where the input had two groups refuses, as a formatter refuses
-a value that collides with its glyphs; it never changes depth.
-Commits occur only at depth zero: `lbody` below is `body` without them.
+discarded with them. The number of SUB before a GS is the group's depth
+less one: `␝a` is at depth one, `␚␝b` at depth two, `␚␚␝c` at depth three.
+Layout may follow each SUB as it follows every code. A group's depth is at
+most one more than the depth of the group line before it in the same
+file, dead or not, and the first group line of a file is at depth one; a
+deeper group line is an error, "depth skipped" (`␝a␚␚␝c`, `␜f␚␝g`).
+`␝x␇␚␝draft␚␚␝notes` is fine: `notes` is one deeper than the dead `draft`
+as written, and dies with it. Repetition of a code is an empty element
+for every code: `␝␝b` is an empty-named group then group `b`, as `␟␟` is
+an empty unit and `␞␞` an empty record. Commits occur only at depth zero:
+`lbody` below is `body` without them.
 
     lbody     = lpart *( file-line lpart )
     lpart     = *lpre [ header-row ] *litem *lgroup
@@ -92,13 +95,11 @@ Commits occur only at depth zero: `lbody` below is `body` without them.
 
 ## Records
 
-    record      = [ sup ] RS L ( keyed / positional )
-    positional  = unit *( [ sup ] US L unit )
+    record      = RS L ( keyed / positional )
+    positional  = unit *( US L unit )
     unit        = [ ( plain / text / level / reference ) L ] *note
     keyed       = *note keyed-unit *( keyed-unit / note )
-    keyed-unit  = [ BEL L / sup ] SOH L name L US L unit
-
-    sup         = SUB L
+    keyed-unit  = [ BEL L ] SOH L name L US L unit
 
     header-row  = SOH L RS L name L *note *( US L name L *note )
 
@@ -111,17 +112,10 @@ header row; `SOH` followed by anything else begins a keyed unit, which
 occurs only in a record or the heading. The heading's units take `hvalue`
 (no reference). A keyed record whose units are all dead is an empty map.
 
-`sup` is **supersession** (DESIGN.md, Supersession): SUB before US, SOH,
-RS, GS or FS marks the element before that code as superseded by the
-element after it, at that code's grain. It is admitted wherever the code
-is, which is why `sup` stands in each rule above and in `hunit`; a header
-row's names are not units and admit none. SUB before any other byte, at
-the end of input, before BEL, or after BEL (`␚␇␞`, `␇␚␞`) matches no
-production. `␝g␚␞x` with no record before it in the group, `␚␝` with no
-earlier group at that depth, `␚␜` with no earlier file and `␚␁` with no
-earlier keyed unit in the record are errors: there is nothing to
-supersede. A unit always has a predecessor, so `␞␚␟x` is the empty first
-unit superseded by `x`.
+**SUB** occurs only as the depth prefix of a group line (Heading and body
+above; DESIGN.md, Depth). SUB before any other byte, at the end of input,
+or before BEL (`␚␇␝b`) matches no production. `␇␚␝b` is a dead group line
+at depth two: BEL kills the line whole, prefix included.
 
 ## Values
 
@@ -161,19 +155,19 @@ error, as is ENQ followed by text. A pattern that is a bare group
 
 BEL owns the text after it like any other code: a `note` has content and
 is skipped by the reader. A `BEL L` in front of a record, header row,
-keyed unit, group line, file line or level marks that element **dead**:
+keyed unit, group line (its SUB prefix included), file line or level
+marks that element **dead**:
 it is parsed as written and then discarded. Because a note's content is
 required, `BEL` directly before a code is always the dead marker, and BEL
-before any other code (US, ETX, CAN, ENQ, BEL, SUB, ETB, EOT, SYN, EM) or
+before any other code (US, ETX, CAN, ENQ, BEL, ETB, EOT, SYN, EM) or
 at the end of input matches no production. A commit's plain text is its
 payload; the commit ends the record before it.
 
 ## C0DIFF
 
 A diff (`shape` `diff`) has no grammar of its own: it is a `body` whose
-records are anchored patterns, with supersession at the unit grain as the
-substitution. What a diff may not hold, and what its records mean, is in
-`DIFF.md`.
+records are anchored patterns. What a diff may not hold, and what its
+records mean, is in `DIFF.md`.
 
 ## Canonical constraints
 
@@ -188,7 +182,7 @@ Canonical Spans) is well-formed and additionally:
    kept as written;
 4. contains no notes, dead elements, commits, SYN, heading, EOT or EM.
    The canonical document span is a `body` with none of these.
-   Supersession is content and is kept, each side in its one spelling.
+   A group line's SUB prefix is structure and is kept.
 
 A file as written carries SYN, a heading whose keys are unique, the
 canonical body, and EOT; the heading and markers are outside the hash.
@@ -198,9 +192,9 @@ canonical body, and EOT; the heading and markers are outside the hash.
 - Outside text, the hot test is `byte < 0x20`; on a hit, the byte's
   meaning is fixed by this grammar with two codes of lookahead, layout
   skipped (`SOH` then `RS`; `BEL` then the code it kills, which may be
-  `SOH` then `RS`; `SUB` then the code it qualifies; `DLE` then the first
-  code of the level), and one code
-  of lookbehind, or a counter, for GS depth (`GS` after `GS`).
+  `SOH` then `RS`, or `SUB` for a dead group line; `SUB` then `GS`; `DLE`
+  then the first code of the level). Depth is a count of SUB read
+  forward; nothing needs lookbehind.
 - Inside text, the reader looks for seven byte values; the parity of the
   DLE run before one of them says whether it is escaped, a lookbehind
   bounded by the run's length. A backward scan for the last ETB or for EM
