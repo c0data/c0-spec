@@ -1,9 +1,15 @@
 # Proposal: SUB GS is depth; supersession is withdrawn; the diff needs no mark
 
 **Status:** Direction agreed 2026-11-14 (SUB GS for depth, supersession
-withdrawn, C0DIFF without a mark). Every detail below is open until taken
-one by one; nothing is written into DESIGN.md, GRAMMAR.md or DIFF.md yet and
-nothing is built. Supersedes `PROPOSAL-SUPERSESSION.md` (decided 2026-11-12,
+withdrawn, C0DIFF without a mark). **Grammar points all decided
+2026-11-14** (see "Open points on the grammar", each marked): layout may
+follow SUB as it follows every code; skipping a depth is an error, measured
+against the previous group as written, dead ones included; `␇␚␝b` is a dead
+group line and `␚␇␝b` an error; empty group names stay legal with no
+exception; the first group of a file is at depth one and FS restarts the
+count. **Diff points still open** (arity, mark, MARK.md respelling), to be
+taken later. Nothing is written into DESIGN.md, GRAMMAR.md or DIFF.md yet
+and nothing is built. Supersedes `PROPOSAL-SUPERSESSION.md` (decided 2026-11-12,
 built in all seven ports 2026-11-13), which stays as history.
 **Date:** 2026-11-14.
 
@@ -73,7 +79,7 @@ count of sixteen does not.
 GRAMMAR.md, replacing the current lines.
 
     file-line  = [ BEL L ] FS L name L
-    group-line = [ BEL L ] *SUB GS L name L
+    group-line = [ BEL L ] *( SUB L ) GS L name L
     hunit      = [ BEL L ] SOH L name L US L [ hvalue ]
     record     = RS L ( keyed / positional )
     positional = unit *( US L unit )
@@ -83,14 +89,13 @@ GRAMMAR.md, replacing the current lines.
 the GS paragraph:
 
 > The number of SUB before a GS is the group's depth less one: `␝a` is at
-> depth one, `␚␝b` at depth two. The SUB run is contiguous and stands
-> directly before the GS; layout follows the GS as everywhere. A group's
-> depth is at most one more than the depth of the previous live group in
-> the same file, and the first live group of a file is at depth one; a
-> deeper group is an error ("depth skipped"). Repetition of a code is an
-> empty element for every code: `␝␝b` is an empty-named group then group
-> `b`. SUB before any byte but GS, or at the end of input, matches no
-> production.
+> depth one, `␚␝b` at depth two. Layout may follow each SUB as it follows
+> every code. A group's depth is at most one more than the depth of the
+> group line before it in the same file, dead or not, and the first group
+> of a file is at depth one; a deeper group is an error ("depth skipped").
+> Repetition of a code is an empty element for every code: `␝␝b` is an
+> empty-named group then group `b`. SUB before any byte but GS, or at the
+> end of input, matches no production.
 
 Implementer note: SUB joins the one-byte lookahead set (`SUB` then `GS`);
 the "one code of lookbehind, or a counter, for GS depth" clause goes.
@@ -99,22 +104,41 @@ A pattern (references) spells depth the same way: `␅␐␝docs␚␝intro␞3�
 
 ### Open points on the grammar
 
-- **Layout inside the prefix.** Proposed: none (`␚ ␝` is an error). The
-  alternative, `*( SUB L ) GS`, costs nothing in a reader but admits a
-  spelling nobody wants. Recommendation: contiguous.
-- **Skipping.** Proposed: forbidden, measured against the previous *live*
-  group of the file, so dead groups are transparent as everywhere and a
-  canonicaliser that strips a dead group never creates a skip (a dead
-  group's deeper subsections die with it, so no live group follows it at a
-  deeper depth). The alternative is today's rule, "a reader reports what is
-  written and invents nothing", which keeps null-name sections in every
-  model and harness. Recommendation: forbid.
-- **BEL and SUB.** Proposed: `␇␚␝b` is a dead group line at depth two;
-  `␚␇␝b` is an error (SUB before BEL). Today `BEL` before `SUB` is an error
-  because SUB was not an element; now SUB is part of the element's line.
-- **Depth of a dead group for the skip rule.** It is not counted (dead is
-  not there). `␝a␇␚␝x␚␚␝c` is a skip and an error.
+All decided 2026-11-14, one by one.
 
+- **Layout inside the prefix. DECIDED: allowed**, `*( SUB L ) GS`. The
+  first draft proposed contiguous (`␚ ␝` an error); that would have made
+  SUB the one code layout may not follow, against the grammar's uniform
+  rule ("layout touches a code, is not data"). `␚ ␚ ␝name` is depth three
+  in pretty form; canonical form has no layout, so nothing changes there.
+- **Skipping. DECIDED: an error.** `␝a␚␚␝c` is refused ("depth skipped").
+  It removes null-name sections from every model and harness. Safe to
+  relax later; the reverse would never be.
+- **What the skip rule measures against. DECIDED: the group line before,
+  as written, dead or not.** The first draft said "previous live group";
+  that makes the natural way to kill a section with its subsections an
+  error:
+
+      ␝x␇␚␝draft␚␚␝notes
+
+  `draft` is dead at depth two and takes `notes` with it; as written,
+  `notes` is one deeper than `draft` and fine. Against the previous live
+  group (`x`, depth one) it would skip. As written is also safe for the
+  canonicaliser: a dead group at depth d swallows everything deeper after
+  it, so the next surviving group is at depth d or less and never skips
+  once the dead ones are stripped.
+- **BEL and SUB. DECIDED:** `␇␚␝b` is a dead group line at depth two;
+  `␚␇␝b` is an error (SUB before BEL). BEL kills the whole line, prefix
+  included.
+- **Empty group names. DECIDED: legal, no exception.** `␝␝b` is an
+  empty-named group followed by group `b`; the limitation paragraph goes.
+- **First group of a file. DECIDED: depth one; FS restarts the count.**
+  `␜f␚␝g` is a skip and an error; after every `␜` the next group line is at
+  depth one again.
+
+The rule of thumb used: when in doubt, the error is the safe choice. A
+1.0 error can become legal in 1.1 without breaking any document that was
+valid; something accepted in 1.0 can never be forbidden later.
 
 ## DESIGN.md changes
 
@@ -228,10 +252,13 @@ nested 12, diff 41 = 277. Every case below is named; nothing else changes.
 - Moved to invalid (1): `gs-depth-skipped` (`␝a␚␚␝c␞1`, "depth skipped").
   It is the only case with a null-name *section*; the null-name *files* in
   the reference cases are leading files and stay.
-- New (3): `empty-group-then-group` (`␝␝b␞x`: groups `""` and `b`),
+- New (5): `empty-group-then-group` (`␝␝b␞x`: groups `""` and `b`),
   `depth-after-dead-group` (`␝a␇␚␝x␝b␞1`: a dead subgroup does not break
   the file), `dead-subgroup-line` (`␝a␞1␇␚␝s␞2␝b␞3`: `s` and its record
-  die).
+  die), `dead-group-dead-subsection` (`␝x␇␚␝draft␚␚␝notes␝y␞1`: `notes`
+  is one deeper than the dead `draft` as written, not a skip; both die,
+  `x` and `y` remain), `sub-layout-gs` (`␚ ␝g␞1` under a depth-one group:
+  layout after SUB, depth two).
 
 **encode** (19): the builder writes depth as `gs(name, depth: 2)` or an
 explicit `sub` primitive before `gs`; no case changes bytes except any
@@ -251,8 +278,9 @@ that spell depth (none today). `reference-plain` unchanged.
 - New (9, plus the one moved from decode): `sub-before-us` (`␞a␚␟b`), `sub-before-rs` (`␞a␚␞b`),
   `sub-before-fs` (`␚␜f`), `sub-before-soh` (`␞␚␁k␟v`), `sub-before-value`
   (`␞␚a`), `sub-at-eof` (`␞a␚`), `sub-before-bel` (`␚␇␝g`),
-  `sub-layout-gs` (`␚ ␝g`), `depth-skipped` (moved from decode),
-  `depth-first-group` (`␚␝g␞1`: the first group of a file at depth two).
+  `depth-skipped` (moved from decode), `depth-first-group` (`␚␝g␞1`: the
+  first group of a file at depth two), `depth-after-fs` (`␝a␚␝b␜f␚␝g␞1`:
+  FS restarts the count, so `g` at depth two is a skip).
 
 **stream** (20), **nested** (12): unchanged; none holds SUB or a GS run.
 
@@ -266,8 +294,8 @@ that spell depth (none today). `reference-plain` unchanged.
 - New (2): `two-units-refused` (`␞a␟b`), `five-units-refused`
   (`␞a␟b␟c␟d␟e`).
 
-After: decode 89, encode 19, canonical 27, invalid 61, stream 20, nested 12,
-diff 41 = 269. `gen.py` regenerates all of it; its applier reads records by
+After: decode 91, encode 19, canonical 27, invalid 61, stream 20, nested 12,
+diff 41 = 271. `gen.py` regenerates all of it; its applier reads records by
 position.
 
 

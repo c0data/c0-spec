@@ -113,9 +113,18 @@ package version.
 0. **Supersession is being withdrawn; SUB GS becomes depth (direction
    agreed 2026-11-14).** `notes/PROPOSAL-SUB-DEPTH.md` has the grammar, the
    DIFF.md respelling by position (units in threes), every vector's fate
-   and the port deletions; its open points are to be taken one by one
-   before anything is edited. Until then item 1 below describes what is
-   built in all seven ports (c0-spec 7b13feb), not where the spec is going.
+   and the port deletions. **Its grammar points are all decided
+   (2026-11-14):** `group-line = [ BEL L ] *( SUB L ) GS L name L`; layout
+   may follow SUB; a depth skip is an error, measured against the group
+   line before as written, dead or not (`␝x␇␚␝draft␚␚␝notes` is fine,
+   `␝a␚␚␝c` is not); `␇␚␝b` dead, `␚␇␝b` an error; empty group names legal
+   with no exception (`␝␝b` = empty group then `b`); first group of a file
+   at depth one, FS restarts the count. **Still open, to take later:** diff
+   record arity (threes vs exactly 1-or-4), any diff mark at all, and
+   whether MARK.md is respelled now or carries a status line. Nothing in
+   DESIGN.md, GRAMMAR.md, DIFF.md or the vectors is edited yet. Until then
+   item 1 below describes what is built in all seven ports (c0-spec
+   7b13feb), not where the spec is going.
 
 1. **C0DIFF review: decided and written, 2026-11-12.** DIFF.md,
    GRAMMAR.md and DESIGN.md are rewritten: no `diff-body`, supersession in
