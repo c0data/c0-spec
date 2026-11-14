@@ -70,13 +70,19 @@ package version.
   **nearest wins**: the closest matching target before the ENQ, else the
   first after; stream readers resolve against committed blocks only.
   Hashed as written.
-- **Supersession** (decided 2026-11-10, written 2026-11-12): SUB before
-  US, SOH, RS, GS or FS marks the element before as superseded by the one
-  after, at that grain (`old␚␟new`); legal everywhere the code is; content,
-  hashed as written; a document model reports the result. **C0DIFF** is a
-  body of records under constraints (`DIFF.md`): anchored patterns,
-  `old␚␟new` substitutions, every unused slot an error, no replace-all
-  mark, uniqueness to end of file, no diff grammar.
+- **Depth is `SUB GS`** (decided 2026-11-14, written the same day, c0-spec
+  `ccf5ae3`): `group-line = [ BEL L ] *( SUB L ) GS L name L`, depth one
+  plus the SUB count; layout may follow SUB; a skip is an error measured
+  against the group line before as written, dead or not; first group of a
+  file at depth one, FS restarts; `␇␚␝b` dead, `␚␇␝b` an error; the prefix
+  is kept in canonical form. Repetition is an empty element for every
+  code, GS included (`␝␝b` = empty group then `b`; no limitation, no
+  canonicaliser refusal). **Supersession is withdrawn** at every grain (it
+  was decided 2026-11-10 and built in all seven ports 2026-11-13; the
+  ports still carry it). **C0DIFF** is a body of records under constraints
+  (`DIFF.md`): anchored patterns, every unused slot an error, no
+  replace-all mark, uniqueness to end of file, no diff grammar; how a
+  substitution is spelled without SUB is open (item 0).
 - Heading keys `shape` (`diff` | `stream`), `version`, `blob`, and
   `schema` (a name, or a keyed record of `name`, `url`, `hash`, the hash
   of the schema's canonical body; decided 2026-11-11, the shape hints cut
@@ -110,21 +116,21 @@ package version.
 
 ## What is open
 
-0. **Supersession is being withdrawn; SUB GS becomes depth (direction
-   agreed 2026-11-14).** `notes/PROPOSAL-SUB-DEPTH.md` has the grammar, the
-   DIFF.md respelling by position (units in threes), every vector's fate
-   and the port deletions. **Its grammar points are all decided
-   (2026-11-14):** `group-line = [ BEL L ] *( SUB L ) GS L name L`; layout
-   may follow SUB; a depth skip is an error, measured against the group
-   line before as written, dead or not (`␝x␇␚␝draft␚␚␝notes` is fine,
-   `␝a␚␚␝c` is not); `␇␚␝b` dead, `␚␇␝b` an error; empty group names legal
-   with no exception (`␝␝b` = empty group then `b`); first group of a file
-   at depth one, FS restarts the count. **Still open, to take later:** diff
-   record arity (threes vs exactly 1-or-4), any diff mark at all, and
-   whether MARK.md is respelled now or carries a status line. Nothing in
-   DESIGN.md, GRAMMAR.md, DIFF.md or the vectors is edited yet. Until then
-   item 1 below describes what is built in all seven ports (c0-spec
-   7b13feb), not where the spec is going.
+0. **SUB GS is depth; supersession withdrawn (decided 2026-11-14).**
+   Written into GRAMMAR.md, DESIGN.md (new section Depth (SUB), Document
+   Mode respelled) and reference.md, c0-spec `ccf5ae3`; the full
+   reasoning and every vector's fate are in `notes/PROPOSAL-SUB-DEPTH.md`.
+   **Still open, to take one by one:** (a) diff record arity, units in
+   threes (anchor, old, new, optional closing anchor) or exactly 1-or-4;
+   (b) any diff mark at all, none or a level per substitution; (c) MARK.md
+   respelled now or carrying a status line. **Not yet respelled, waiting
+   on those:** DIFF.md, `vectors/diff.json`, and the C0DIFF passages that
+   still show `old␚␟new` in DESIGN.md (heading example and the C0DIFF
+   section), reference.md (document example and the C0DIFF section) and
+   MARK.md. The other vector files are not regenerated either: `gen.py`
+   is run once, after the diff points, so that `vectors/*.json` change in
+   one commit. Until then item 1 below describes what is built in all seven
+   ports (c0-spec 7b13feb), not where the spec is.
 
 1. **C0DIFF review: decided and written, 2026-11-12.** DIFF.md,
    GRAMMAR.md and DESIGN.md are rewritten: no `diff-body`, supersession in
