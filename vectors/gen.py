@@ -297,6 +297,10 @@ dec("comment-dead-group-subsections", "A dead group ends where a live one would,
     "␝g1␞1␇␝g2␞2␚␝s␞3␝g3␞4", [g("g1", [["1"]]), g("g3", [["4"]])])
 dec("comment-label-in-note", "A group line inside a text note is gone and its records fall through to the group before",
     "␝g1␞1␇␂␝g2␃␞2", [g("g1", [["1"], ["2"]])])
+dec("comment-dead-keyed-unit-sub-units", "A dead keyed unit takes its sub-units with it",
+    "␞␇␁k␟v␚␟w␁z␟1", [g("", [keyed(("z", "1"))])])
+dec("comment-dead-empty-group-then-group", "BEL GS GS: a dead empty-named group, then a live group; GS repetition is not depth in a dead line either",
+    "␇␝␝b␞1", [g("b", [["1"]])])
 dec("comment-dead-keyed-unit", "A dead keyed unit is dropped from the map",
     "␞␁a␟1␇␁b␟2␁c␟3", [g("", [keyed(("a", "1"), ("c", "3"))])])
 dec("comment-note-in-heading", "A note between heading keys",
@@ -504,6 +508,8 @@ inv("sub-unit-in-heading", "The heading's values take no sub-units", "␖␁sche
 inv("depth-first-group", "The first group of a file is at depth one: depth two is a skip", "␚␝g␞x")
 inv("depth-skipped", "A depth may not be skipped: c would be at depth three under a", "␝a␚␚␝c␞1")
 inv("depth-after-fs", "FS restarts the count: the first group of the second file is at depth one", "␝a␚␝b␜f␚␝g␞1")
+inv("sub-unit-in-pattern", "A sub-unit is not a step of a pattern", "␞a␟␅␐␝g␞3␚␟x␘")
+inv("sub-unit-in-pattern-keyed", "A sub-unit on a pattern's keyed unit is not a step either", "␞a␟␅␐␝g␞␁k␟␚␟x␘")
 inv("sub-unit-depth-skipped", "A sub-unit may not skip a depth either", "␞a␚␚␟c")
 inv("bytes-after-eot", "After EOT only layout, SYN or EM may follow", "␖␞a␄x")
 inv("heading-schema-positional", "A schema level holds a keyed record, not a positional one", "␖␁schema␟␐␞a␟b␘␞x")

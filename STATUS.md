@@ -127,9 +127,9 @@ package version.
    `notes/PROPOSAL-SUB-DEPTH.md`); the open diff points (arity, mark,
    MARK.md) then resolved together when the user read SUB as
    *subordinate* at every grain: the diff's `new` is the sub-unit of `old`,
-   so no arity rule, no new mark, no respelling. Vectors now: decode 103,
-   encode 19, canonical 30, invalid 65, stream 20, nested 12, diff 42 =
-   291 (sub-unit cases `sub-unit*`, depth cases `depth-*`,
+   so no arity rule, no new mark, no respelling. Vectors now: decode 105,
+   encode 19, canonical 30, invalid 67, stream 20, nested 12, diff 42 =
+   295 (sub-unit cases `sub-unit*`, depth cases `depth-*`,
    `empty-group-then-group`, `dead-*`; `supersede-*` gone; the vector
    README documents `{"value", "subs"}`). **Every port must move again**:
    delete record/group/file/key supersession and the `superseded?` flag,

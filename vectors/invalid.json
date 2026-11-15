@@ -162,6 +162,16 @@
       "bytes": "1d611a1d621c661a1d671e31"
     },
     {
+      "name": "sub-unit-in-pattern",
+      "desc": "A sub-unit is not a step of a pattern",
+      "bytes": "1e611f05101d671e331a1f7818"
+    },
+    {
+      "name": "sub-unit-in-pattern-keyed",
+      "desc": "A sub-unit on a pattern's keyed unit is not a step either",
+      "bytes": "1e611f05101d671e016b1f1a1f7818"
+    },
+    {
       "name": "sub-unit-depth-skipped",
       "desc": "A sub-unit may not skip a depth either",
       "bytes": "1e611a1a1f63"

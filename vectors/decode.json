@@ -2248,6 +2248,45 @@
       ]
     },
     {
+      "name": "comment-dead-keyed-unit-sub-units",
+      "desc": "A dead keyed unit takes its sub-units with it",
+      "bytes": "1e07016b1f761a1f77017a1f31",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            {
+              "keys": [
+                [
+                  "z",
+                  "1"
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comment-dead-empty-group-then-group",
+      "desc": "BEL GS GS: a dead empty-named group, then a live group; GS repetition is not depth in a dead line either",
+      "bytes": "071d1d621e31",
+      "file": null,
+      "groups": [
+        {
+          "name": "b",
+          "headers": null,
+          "records": [
+            [
+              "1"
+            ]
+          ]
+        }
+      ]
+    },
+    {
       "name": "comment-dead-keyed-unit",
       "desc": "A dead keyed unit is dropped from the map",
       "bytes": "1e01611f310701621f3201631f33",
