@@ -136,8 +136,14 @@ package version.
    add the depth prefix (`sections` via SUB GS, no skipping, no null-name
    sections) and sub-units (`Unit#subs` or equivalent, nested), keep the
    diff applier's bytes and rename its errors; builder `gs(name, depth:)`
-   or `sub` before `gs`/`us`. Until then item 1 below describes what is
-   built in all seven ports (c0-spec 7b13feb), not where the spec is.
+   or `sub` before `gs`/`us`. **Ported so far: Crystal c0-cr `91b45a1`**
+   (318 specs, all 291 vectors; `Unit#subs`, `Record#unit(n|key)`,
+   `Builder#gs(name, depth:)`, `Builder#sub_unit`; `supersede` and
+   `Parser#supersessions` gone); c0-fmt builds and runs against it with no
+   change (its JSON/CSV exports see units only, sub-units are not units).
+   JS, Rust, Go, C in flight 2026-11-15; Python and Ruby follow over C.
+   Until all are in, item 1 below describes what is built in the other
+   ports (c0-spec 7b13feb), not where the spec is.
 
 1. **C0DIFF review: decided and written, 2026-11-12.** DIFF.md,
    GRAMMAR.md and DESIGN.md are rewritten: no `diff-body`, supersession in
