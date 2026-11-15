@@ -12,8 +12,8 @@ are taken and written (2026-11-12); SUB is subordinate at every grain
 ports implement it, every suite green; everything is pushed and
 **`v1.0.0` is tagged and pushed everywhere (2026-11-15)**. Published the
 same day: npm `c0data@1.0.0`, PyPI `c0data-py 1.0.0` (workflow on the
-tag), crates.io `c0data 1.0.0`, Go `v1.0.0` in the module proxy;
-RubyGems still at 0.3.1 (item 2).
+tag), crates.io `c0data 1.0.0`, Go `v1.0.0` in the module proxy, RubyGems
+`c0data 1.0.0`. **1.0.0 is released on every registry.**
 
 | Repository | Tag | Head | State |
 |---|---|---|---|
@@ -227,9 +227,8 @@ after the last commit. The C core and its bindings do not expose them.
    next time, trusted publishing from a workflow, as c0-py does); PyPI
    `c0data-py 1.0.0` by the `v1.0.0` tag through
    `.github/workflows/publish.yml`; crates.io `c0data 1.0.0`; Go `v1.0.0`
-   in proxy.golang.org. **RubyGems still 0.3.1:** `gem build
-   c0data.gemspec && gem push c0data-1.0.0.gem` in c0-rb is the author's
-   step. Crystal shards resolve from the tag. Python ships an sdist only;
+   in proxy.golang.org. RubyGems `c0data 1.0.0` by hand the same day. Crystal shards resolve
+   from the tag. **All five registries carry 1.0.0.** Python ships an sdist only;
    wheels via cibuildwheel are a possible later addition.
 3. **Cosmetic, Crystal Pretty:** continues a record on the line of a
    closing `␘`; groups are not indented under `␜` as the DESIGN example
@@ -255,8 +254,8 @@ after the last commit. The C core and its bindings do not expose them.
    is the reference walk), then JS, Rust, Go, C, then Python and Ruby over
    the C core, each against the vectors; never hand-edit a vector. c0-fmt
    follows c0-cr (it depends on `main`).
-3. Publish the gem (item 2), then update downstream (item 4) and the
-   landing page benchmarks (item 5).
+3. 1.0.0 is released everywhere. Next: downstream (item 4), the landing
+   page benchmarks (item 5), npm trusted publishing for c0-js.
 
 ## Working conventions that were in force
 
