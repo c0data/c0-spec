@@ -12,7 +12,7 @@ depends on.
 - `GRAMMAR.md` — the formal grammar (ABNF) of well-formed input, with the
   canonical constraints.
 - `DIFF.md` — the C0DIFF profile: anchored patterns as records,
-  substitution by supersession, atomicity.
+  substitution by sub-unit, atomicity.
 - `MARK.md` — the C0MARK proposal (1.x, not normative): editor's marks in
   a document, pairs on units and islands inside text.
 - `reference.md` — the technical reference (format overview, control codes,
@@ -25,10 +25,10 @@ depends on.
   for a document start marker (SYN), comments (BEL), text and nesting
   (STX … ETX text, SI … CAN levels), keyed units (SOH introduces a
   key), and a trailing blob (EM), all settled 2026-10-07 and now
-  normative in DESIGN.md; and the 2026-11 proposal for supersession (SUB
-  before a separator), decided 2026-11-12 and now normative in DESIGN.md
-  and DIFF.md (`notes/PROPOSAL-SUPERSESSION.md`), with the two 2026-11-09
-  reviews it answered.
+  normative in DESIGN.md; and the 2026-11 proposals that made SUB the
+  one subordination mark (`notes/PROPOSAL-SUPERSESSION.md`, then
+  `notes/PROPOSAL-SUB-DEPTH.md`), decided 2026-11-15 and now normative in
+  DESIGN.md and DIFF.md, with the two 2026-11-09 reviews they answered.
   Nothing in `notes/` is adopted until it appears in DESIGN.md.
 
 ## Using the vectors
