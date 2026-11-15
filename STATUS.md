@@ -10,10 +10,10 @@ The 1.0 redesign of the format is complete. The C0DIFF and format reviews
 are taken and written (2026-11-12); SUB is subordinate at every grain
 (decided and written 2026-11-15, vectors `f677533`, 295 cases); all seven
 ports implement it, every suite green; everything is pushed and
-**`v1.0.0` is tagged everywhere (2026-11-15)**. The c0-py and c0-go tags
-are local until the author pushes them, since that push is the PyPI
-publish and the Go proxy release (item 2); the registries are not yet
-published.
+**`v1.0.0` is tagged and pushed everywhere (2026-11-15)**. Published the
+same day: npm `c0data@1.0.0`, PyPI `c0data-py 1.0.0` (workflow on the
+tag), crates.io `c0data 1.0.0`, Go `v1.0.0` in the module proxy;
+RubyGems still at 0.3.1 (item 2).
 
 | Repository | Tag | Head | State |
 |---|---|---|---|
@@ -21,9 +21,9 @@ published.
 | c0-cr (Crystal, reference) | v1.0.0 | `62e4b77` | 329 specs; on spec `30010b2`; one Parser (parser.cr) under Body, Document, Validator, Stream and Diff |
 | c0-js | v1.0.0 | `c8b96c8` | 370 tests; npm name `c0data` |
 | c0-rs | v1.0.0 | `70943c8` | 58 tests, clippy clean; crate `c0data`, library `c0` |
-| c0-go | v1.0.0 (tag local) | `ecb5cb0` | 297 subtests + 30 tests; gofmt, vet clean |
+| c0-go | v1.0.0 | `ecb5cb0` | 297 subtests + 30 tests; gofmt, vet clean |
 | c0-c | v1.0.0 | `e210d90` | `make test`, `make asan` clean; zero warnings under `-Wall -Wextra -Wpedantic` |
-| c0-py | v1.0.0 (tag local) | `0a2d4e0` | 42 tests; binds c0-c `e210d90`; PyPI name `c0data-py`, import `c0` |
+| c0-py | v1.0.0 | `0a2d4e0` | 42 tests; binds c0-c `e210d90`; PyPI name `c0data-py`, import `c0` |
 | c0-rb | v1.0.0 | `0298da4` | 332 runs; binds c0-c `e210d90`; gem `c0data`, require `c0` |
 | c0-fmt (CLI) | v1.0.0 | `31b4d83` | lockstep with c0-cr; shard.lock pins c0 1.0.0 at `62e4b77` |
 | c0-ed (editor) | v0.3.0 | `f276cec` | VS Code extension built, not yet installed or tried |
@@ -218,20 +218,19 @@ after the last commit. The C core and its bindings do not expose them.
    inside a diff unit (a note on an empty unit holding an insertion;
    notes are allowed in a diff).
 
-2. **Tags and releases. `v1.0.0` tagged 2026-11-15** in every repository
-   (commit "Version 1.0.0" in each; all seven ports on spec `30010b2`,
-   Python and Ruby over C `e210d90`). Pushed with their tags: c0-spec,
-   c0-cr, c0-c, c0-js, c0-rs, c0-rb, c0-fmt. c0-py and c0-go: main
-   pushed, tag local. **The author's steps:** `git -C c0-py push origin
-   v1.0.0` publishes to PyPI through `.github/workflows/publish.yml`
-   (trusted publishing); `git -C c0-go push origin v1.0.0` is the Go
-   module proxy release; then by hand `npm publish` in c0-js (2FA),
-   `cargo publish` in c0-rs, `gem build c0data.gemspec && gem push
-   c0data-1.0.0.gem` in c0-rb. Crystal shards resolve from the tag. All
-   four 0.x registry releases were done 2026-11-08; npm, crates.io and
-   RubyGems by hand (a trusted-publisher workflow would avoid the token
-   next time). Python ships an sdist only; wheels via cibuildwheel are a
-   possible later addition.
+2. **Tags and releases. `v1.0.0` tagged and pushed 2026-11-15** in every
+   repository (commit "Version 1.0.0" in each; all seven ports on spec
+   `30010b2`, Python and Ruby over C `e210d90`). **Published 2026-11-15:**
+   npm `c0data@1.0.0` (needed a granular token with the 2FA bypass, set
+   from a terminal with `read -s`, since the web-login session cannot
+   complete 2FA outside a TTY and npm is deprecating such tokens:
+   next time, trusted publishing from a workflow, as c0-py does); PyPI
+   `c0data-py 1.0.0` by the `v1.0.0` tag through
+   `.github/workflows/publish.yml`; crates.io `c0data 1.0.0`; Go `v1.0.0`
+   in proxy.golang.org. **RubyGems still 0.3.1:** `gem build
+   c0data.gemspec && gem push c0data-1.0.0.gem` in c0-rb is the author's
+   step. Crystal shards resolve from the tag. Python ships an sdist only;
+   wheels via cibuildwheel are a possible later addition.
 3. **Cosmetic, Crystal Pretty:** continues a record on the line of a
    closing `␘`; groups are not indented under `␜` as the DESIGN example
    shows.
@@ -256,8 +255,8 @@ after the last commit. The C core and its bindings do not expose them.
    is the reference walk), then JS, Rust, Go, C, then Python and Ruby over
    the C core, each against the vectors; never hand-edit a vector. c0-fmt
    follows c0-cr (it depends on `main`).
-3. Push the c0-py and c0-go tags and publish 1.0.0 to the registries
-   (item 2), then update downstream (item 4).
+3. Publish the gem (item 2), then update downstream (item 4) and the
+   landing page benchmarks (item 5).
 
 ## Working conventions that were in force
 
