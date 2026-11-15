@@ -98,7 +98,7 @@
     },
     {
       "name": "sub-before-value",
-      "desc": "SUB qualifies the separator after it; before a value it matches nothing",
+      "desc": "SUB stands before a separator; before a value it matches nothing",
       "bytes": "1e611a62"
     },
     {
@@ -108,38 +108,63 @@
     },
     {
       "name": "sub-at-eof",
-      "desc": "SUB at the end of input has nothing to qualify",
+      "desc": "SUB at the end of input has nothing to prefix",
       "bytes": "1e611a"
     },
     {
       "name": "sub-before-bel",
-      "desc": "SUB next to BEL is an error",
+      "desc": "SUB before BEL is an error",
       "bytes": "1e611f621a071e63"
     },
     {
-      "name": "bel-before-sub",
-      "desc": "BEL before SUB is an error: SUB is not an element",
+      "name": "sub-before-bel-gs",
+      "desc": "SUB before BEL GS is an error: BEL comes first and kills the line with its prefix",
+      "bytes": "1d611a071d671e31"
+    },
+    {
+      "name": "bel-before-sub-unit",
+      "desc": "BEL before a sub-unit is an error: a unit cannot be dead",
       "bytes": "1e61071a1f62"
     },
     {
-      "name": "sub-record-nothing-before",
-      "desc": "A record supersession needs a record before it in the group",
-      "bytes": "1d671a1e78"
+      "name": "sub-record-reserved",
+      "desc": "SUB before RS (a sub-record) is reserved",
+      "bytes": "1e611a1e62"
     },
     {
-      "name": "sub-group-nothing-before",
-      "desc": "A group supersession needs an earlier group at that depth",
+      "name": "sub-file-reserved",
+      "desc": "SUB before FS (a sub-file) is reserved",
+      "bytes": "1c611a1c621e78"
+    },
+    {
+      "name": "sub-key-reserved",
+      "desc": "SUB before SOH (a sub-key) is reserved",
+      "bytes": "1e016b1f761a016a1f77"
+    },
+    {
+      "name": "sub-unit-in-heading",
+      "desc": "The heading's values take no sub-units",
+      "bytes": "1601736368656d611f611a1f621e78"
+    },
+    {
+      "name": "depth-first-group",
+      "desc": "The first group of a file is at depth one: depth two is a skip",
       "bytes": "1a1d671e78"
     },
     {
-      "name": "sub-file-nothing-before",
-      "desc": "A file supersession needs an earlier file",
-      "bytes": "1a1c661e78"
+      "name": "depth-skipped",
+      "desc": "A depth may not be skipped: c would be at depth three under a",
+      "bytes": "1d611a1a1d631e31"
     },
     {
-      "name": "sub-first-keyed-unit",
-      "desc": "The first keyed unit of a record has nothing to supersede",
-      "bytes": "1e1a016b1f76"
+      "name": "depth-after-fs",
+      "desc": "FS restarts the count: the first group of the second file is at depth one",
+      "bytes": "1d611a1d621c661a1d671e31"
+    },
+    {
+      "name": "sub-unit-depth-skipped",
+      "desc": "A sub-unit may not skip a depth either",
+      "bytes": "1e611a1a1f63"
     },
     {
       "name": "bytes-after-eot",

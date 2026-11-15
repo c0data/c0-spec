@@ -250,7 +250,7 @@
     },
     {
       "name": "note-after-substitution",
-      "desc": "A note after a superseding unit is a note",
+      "desc": "A note after a sub-unit is a note",
       "files": {
         "a.txt": "ab\n"
       },
@@ -390,8 +390,8 @@
       "error": true
     },
     {
-      "name": "chained-supersession-refused",
-      "desc": "A chained supersession refuses: the file never held the middle",
+      "name": "two-sub-units-refused",
+      "desc": "Two sub-units on one unit refuse: one old has one new",
       "files": {
         "a.txt": "foo\n"
       },
@@ -399,8 +399,17 @@
       "error": true
     },
     {
+      "name": "nested-sub-unit-refused",
+      "desc": "A sub-unit of a sub-unit refuses",
+      "files": {
+        "a.txt": "foo\n"
+      },
+      "diff": "160173686170651f646966661c612e7478741e666f6f1a1f6261721a1a1f62617a04",
+      "error": true
+    },
+    {
       "name": "record-grain-refused",
-      "desc": "Supersession at the record grain is reserved and refuses",
+      "desc": "SUB before RS is reserved and refuses",
       "files": {
         "a.txt": "foo\n"
       },

@@ -70,19 +70,24 @@ package version.
   **nearest wins**: the closest matching target before the ENQ, else the
   first after; stream readers resolve against committed blocks only.
   Hashed as written.
-- **Depth is `SUB GS`** (decided 2026-11-14, written the same day, c0-spec
-  `ccf5ae3`): `group-line = [ BEL L ] *( SUB L ) GS L name L`, depth one
-  plus the SUB count; layout may follow SUB; a skip is an error measured
-  against the group line before as written, dead or not; first group of a
-  file at depth one, FS restarts; `␇␚␝b` dead, `␚␇␝b` an error; the prefix
-  is kept in canonical form. Repetition is an empty element for every
-  code, GS included (`␝␝b` = empty group then `b`; no limitation, no
-  canonicaliser refusal). **Supersession is withdrawn** at every grain (it
-  was decided 2026-11-10 and built in all seven ports 2026-11-13; the
-  ports still carry it). **C0DIFF** is a body of records under constraints
-  (`DIFF.md`): anchored patterns, every unused slot an error, no
-  replace-all mark, uniqueness to end of file, no diff grammar; how a
-  substitution is spelled without SUB is open (item 0).
+- **SUB is subordinate** (decided 2026-11-14/15, written c0-spec `ccf5ae3`
+  and `6da01b0`): SUB before a code makes the element after it a child of
+  the element before, at that code's grain. Open in 1.0: **SUB GS, a
+  subsection** (`group-line = [ BEL L ] *( SUB L ) GS L name L`, depth one
+  plus the SUB count) and **SUB US, a sub-unit** (`unit = [ value L ] *note
+  *sub-unit`, `sub-unit = 1*( SUB L ) US L [ value L ] *note`; not a unit of
+  the record; keyed values take them too; the heading's values do not).
+  Reserved, errors: SUB RS (sub-record), SUB FS, SUB SOH. Rules at every
+  grain: layout may follow SUB; a skip is an error measured against the
+  element before at that grain as written, dead or not; first group of a
+  file at depth one, FS restarts; `␇␚␝b` dead, `␚␇␝b` and `␇␚␟` errors;
+  the prefix is structure, kept in canonical form. Repetition is an empty
+  element for every code, GS included (`␝␝b` = empty group then `b`; no
+  limitation, no canonicaliser refusal). **Supersession is withdrawn** as
+  a meaning; its unit-grain bytes survive as the sub-unit, so **C0DIFF**
+  (`DIFF.md`) is unchanged in bytes: anchored patterns, `old␚␟new` the
+  sub-unit of `old`, every unused slot an error, no replace-all mark,
+  uniqueness to end of file, no diff grammar. MARK.md's bytes stand too.
 - Heading keys `shape` (`diff` | `stream`), `version`, `blob`, and
   `schema` (a name, or a keyed record of `name`, `url`, `hash`, the hash
   of the schema's canonical body; decided 2026-11-11, the shape hints cut
@@ -116,21 +121,23 @@ package version.
 
 ## What is open
 
-0. **SUB GS is depth; supersession withdrawn (decided 2026-11-14).**
-   Written into GRAMMAR.md, DESIGN.md (new section Depth (SUB), Document
-   Mode respelled) and reference.md, c0-spec `ccf5ae3`; the full
-   reasoning and every vector's fate are in `notes/PROPOSAL-SUB-DEPTH.md`.
-   **Still open, to take one by one:** (a) diff record arity, units in
-   threes (anchor, old, new, optional closing anchor) or exactly 1-or-4;
-   (b) any diff mark at all, none or a level per substitution; (c) MARK.md
-   respelled now or carrying a status line. **Not yet respelled, waiting
-   on those:** DIFF.md, `vectors/diff.json`, and the C0DIFF passages that
-   still show `old␚␟new` in DESIGN.md (heading example and the C0DIFF
-   section), reference.md (document example and the C0DIFF section) and
-   MARK.md. The other vector files are not regenerated either: `gen.py`
-   is run once, after the diff points, so that `vectors/*.json` change in
-   one commit. Until then item 1 below describes what is built in all seven
-   ports (c0-spec 7b13feb), not where the spec is.
+0. **SUB is subordinate: decided and written 2026-11-15 (spec `6da01b0`,
+   vectors regenerated the same day).** The road: 2026-11-14 SUB GS was
+   taken for depth and supersession withdrawn (`ccf5ae3`,
+   `notes/PROPOSAL-SUB-DEPTH.md`); the open diff points (arity, mark,
+   MARK.md) then resolved together when the user read SUB as
+   *subordinate* at every grain: the diff's `new` is the sub-unit of `old`,
+   so no arity rule, no new mark, no respelling. Vectors now: decode 103,
+   encode 19, canonical 30, invalid 65, stream 20, nested 12, diff 42 =
+   291 (sub-unit cases `sub-unit*`, depth cases `depth-*`,
+   `empty-group-then-group`, `dead-*`; `supersede-*` gone; the vector
+   README documents `{"value", "subs"}`). **Every port must move again**:
+   delete record/group/file/key supersession and the `superseded?` flag,
+   add the depth prefix (`sections` via SUB GS, no skipping, no null-name
+   sections) and sub-units (`Unit#subs` or equivalent, nested), keep the
+   diff applier's bytes and rename its errors; builder `gs(name, depth:)`
+   or `sub` before `gs`/`us`. Until then item 1 below describes what is
+   built in all seven ports (c0-spec 7b13feb), not where the spec is.
 
 1. **C0DIFF review: decided and written, 2026-11-12.** DIFF.md,
    GRAMMAR.md and DESIGN.md are rewritten: no `diff-body`, supersession in

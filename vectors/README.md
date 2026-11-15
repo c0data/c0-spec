@@ -25,12 +25,14 @@ output. Edit `gen.py`, run `python3 vectors/gen.py`, commit both.
   holding files and groups (same shape as a decode case's `files`), or
   `{"ref": "group"}` for a group reference (ENQ plain) or
   `{"ref": {"level": ...}}` for a path (ENQ level), the pattern reported
-  as the level it is written as.
+  as the level it is written as. A unit that holds **sub-units** (SUB
+  before US, `␞a␟b␚␟c`) is `{"value": <value>, "subs": [<value>, ...]}`,
+  where `value` is any of the above and each entry of `subs` is a value or
+  itself such an object (`␞a␚␟b␚␚␟c`); a unit without sub-units is its
+  bare value. A sub-unit is not a unit of the record; the cases under
+  `sub-unit*` fix this.
 - **Records** are a JSON array (positional) or `{"keys": [[k, v], ...]}`
-  (keyed, SOH units, in written order). A record's units are the **result**
-  after supersession: a superseded unit (`old␚␟new`) is not listed, nor is
-  a superseded record, group, file or keyed unit; the cases under
-  `supersede-*` fix this.
+  (keyed, SOH units, in written order).
 - **Headers** come from a header row, `SOH RS`.
 - A **heading** is `[[key, value], ...]` in written order; absent means no
   SYN.
@@ -60,10 +62,9 @@ Compact bytes → expected structure. Case shape:
 }
 ```
 
-A group may carry `"sections": [...]`, its GS-repeated subsections, each
-of the same shape. A section with `"name": null` is a skipped depth: no
-group stands there and a reader reports none; the harness descends into
-its `sections` without expecting a group. When `files` or `documents` is present, `file` and
+A group may carry `"sections": [...]`, its subsections (SUB before GS,
+`␝a␚␝b`), each of the same shape; a depth is never skipped, so every
+section has a name (possibly empty). When `files` or `documents` is present, `file` and
 `groups` describe the first file of the first document (and are empty
 when `documents` is given).
 

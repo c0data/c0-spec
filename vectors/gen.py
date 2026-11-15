@@ -171,8 +171,8 @@ dec("reference-group-pattern", "A pattern that is a bare group is a group refere
     "␞a␟␅␐␝tags␘", [g("", [["a", ref([g("tags", [])])]])])
 dec("reference-file", "A file line in a pattern names the file",
     "␞a␟␅␐␜b␝tags␞001␘", [g("", [["a", ref([g("tags", [["001"]])], "b")]])])
-dec("reference-depth", "GS repetition in a pattern is depth, as in the document",
-    "␞a␟␅␐␝docs␝␝intro␞3␘",
+dec("reference-depth", "SUB before GS in a pattern is depth, as in the document",
+    "␞a␟␅␐␝docs␚␝intro␞3␘",
     [g("", [["a", ref([{"name": "docs", "headers": None, "records": [],
                         "sections": [{"name": "intro", "headers": None, "records": [["3"]]}]}])]])])
 dec("reference-keyed-unit", "A keyed unit is named by a keyed unit with an empty value",
@@ -182,41 +182,60 @@ dec("reference-into-level", "A level in the third unit continues the pattern int
     [g("", [["a", ref([g("tags", [["001", "children", level([["2"]])]])])]])])
 dec("reference-note-inside", "A note inside a pattern is a note, not a step",
     "␞a␟␅␐␝tags␇why␞001␘", [g("", [["a", ref([g("tags", [["001"]])])]])])
-dec("supersede-unit", "SUB before US: the unit before is superseded by the unit after; a document model reports the result",
-    "␞a␟b␚␟c", [g("", [["a", "c"]])])
-dec("supersede-deletion", "An empty superseding unit deletes: the result keeps the empty unit",
-    "␞old␚␟␞end", [g("", [[""], ["end"]])])
-dec("supersede-insertion", "The empty first unit superseded by a value: an insertion",
-    "␞␚␟new", [g("", [["new"]])])
-dec("supersede-middle", "Arity counts the result: the superseded unit is not counted",
-    "␞a␟b␚␟␟c", [g("", [["a", "", "c"]])])
-dec("supersede-chain", "Supersessions chain; the last stands",
-    "␞a␚␟b␚␟c", [g("", [["c"]])])
-dec("supersede-record", "SUB before RS: the record before is superseded by the record after",
-    "␞a␟b␚␞a␟c", [g("", [["a", "c"]])])
-dec("supersede-keyed-unit", "SUB before SOH: the keyed unit before is superseded",
-    "␞␁k␟v␚␁k␟w", [g("", [keyed(("k", "w"))])])
-dec("supersede-group", "SUB before GS: the group before, at that depth, is superseded",
-    "␝g␞x␚␝g␞y", [g("g", [["y"]])])
-dec("supersede-file", "SUB before FS: the file before is superseded",
-    "␜f␝g␞x␚␜f␝g␞y", [g("g", [["y"]])], file="f",
-    files=[{"name": "f", "groups": [g("g", [["y"]])]}])
-dec("supersede-in-heading", "Supersession is legal in the heading too",
-    "␖␁schema␟a␚␁schema␟b␞x", [g("", [["x"]])], heading=[["schema", "b"]])
-dec("gs-depth", "GS repetition is depth; subsections belong to the group",
-    "␝c1␞p1␝␝s1␞p2␝c2␞p3",
+def su(value, *subs):
+    """A unit holding sub-units: {"value": v, "subs": [...]}."""
+    return {"value": value, "subs": list(subs)}
+
+
+dec("sub-unit", "SUB before US: a sub-unit hangs off the unit before it and is not a unit of the record",
+    "␞a␟b␚␟c", [g("", [["a", su("b", "c")]])])
+dec("sub-unit-empty", "A sub-unit may be empty (a diff's deletion)",
+    "␞old␚␟␞end", [g("", [[su("old", "")], ["end"]])])
+dec("sub-unit-on-empty-first", "The first unit exists even when empty, so it can hold a sub-unit (a diff's insertion)",
+    "␞␚␟new", [g("", [[su("", "new")]])])
+dec("sub-unit-not-counted", "Arity counts units: a US after a sub-unit begins the next unit",
+    "␞a␟b␚␟␟c", [g("", [["a", su("b", ""), "c"]])])
+dec("sub-units-two", "Two SUB US in a row are two sub-units of the same unit",
+    "␞a␚␟b␚␟c", [g("", [[su("a", "b", "c")]])])
+dec("sub-unit-nested", "Two SUB is a sub-unit of the sub-unit before",
+    "␞a␚␟b␚␚␟c", [g("", [[su("a", su("b", "c"))]])])
+dec("sub-unit-keyed-value", "A keyed unit's value takes sub-units the same way",
+    "␞␁name␟Alice␚␟alias", [g("", [keyed(("name", su("Alice", "alias")))])])
+dec("sub-unit-note", "A note after a sub-unit is a note; the next US begins a unit",
+    "␞a␚␟b␇n␟c", [g("", [[su("a", "b"), "c"]])])
+dec("sub-unit-layout", "Layout may follow SUB as it follows every code",
+    "␞a␚ ␟b", [g("", [[su("a", "b")]])])
+dec("sub-unit-text", "A sub-unit is a value under the ordinary rules: text where needed",
+    "␞␂a b␃␚␟␂c d␃", [g("", [[su("a b", "c d")]])])
+dec("sub-unit-level", "A sub-unit may hold a level",
+    "␞a␚␟␐␞x␘", [g("", [[su("a", level([["x"]]))]])])
+dec("depth-subsection", "SUB before GS is depth; a subsection belongs to the group before it",
+    "␝c1␞p1␚␝s1␞p2␝c2␞p3",
     [{"name": "c1", "headers": None, "records": [["p1"]],
       "sections": [{"name": "s1", "headers": None, "records": [["p2"]]}]},
      g("c2", [["p3"]])])
 dec("header-not-inherited", "A header row names its own group's fields; a subsection inherits nothing",
-    "␝c␁␞a␟b␞1␟2␝␝s␞3␟4",
+    "␝c␁␞a␟b␞1␟2␚␝s␞3␟4",
     [{"name": "c", "headers": ["a", "b"], "records": [["1", "2"]],
       "sections": [{"name": "s", "headers": None, "records": [["3", "4"]]}]}])
-dec("gs-depth-skipped", "A skipped depth is reported as nothing: c is at depth three, no group at depth two",
-    "␝a␝␝␝c␞1",
+dec("depth-three", "Each SUB is one level; a depth-one group closes the deeper ones",
+    "␝a␚␝b␚␚␝c␞1␝d␞2",
     [{"name": "a", "headers": None, "records": [],
-      "sections": [{"name": None, "headers": None, "records": [],
-                    "sections": [{"name": "c", "headers": None, "records": [["1"]]}]}]}])
+      "sections": [{"name": "b", "headers": None, "records": [],
+                    "sections": [{"name": "c", "headers": None, "records": [["1"]]}]}]},
+     g("d", [["2"]])])
+dec("depth-layout", "Layout may follow each SUB of the prefix",
+    "␝a␚ ␝g␞1",
+    [{"name": "a", "headers": None, "records": [],
+      "sections": [{"name": "g", "headers": None, "records": [["1"]]}]}])
+dec("empty-group-then-group", "GS GS is an empty-named group then a group: repetition is an empty element for every code",
+    "␝␝b␞x", [g("", []), g("b", [["x"]])])
+dec("depth-after-dead-group", "A dead subgroup does not break the file; the next depth-one group follows",
+    "␝a␇␚␝x␝b␞1", [g("a", []), g("b", [["1"]])])
+dec("dead-subgroup-line", "BEL kills the group line whole, SUB prefix included: the subgroup and its record die",
+    "␝a␞1␇␚␝s␞2␝b␞3", [g("a", [["1"]]), g("b", [["3"]])])
+dec("dead-group-dead-subsection", "A subsection one deeper than a dead group is not a skip as written; it dies with its parent",
+    "␝x␇␚␝draft␚␚␝notes␝y␞1", [g("x", []), g("y", [["1"]])])
 dec("two-files", "A document may hold several FS files",
     "␜a␝g␞1␜b␝g␞2",
     [g("g", [["1"]])], file="a", files=[{"name": "a", "groups": [g("g", [["1"]])]},
@@ -275,7 +294,7 @@ dec("comment-dead-group", "A dead group takes its records with it",
 dec("comment-dead-group-with-header", "A dead group takes its header row and records; the next live group is unaffected",
     "␝g1␞1␇␝g2␁␞x␞2␝g3␞4", [g("g1", [["1"]]), g("g3", [["4"]])])
 dec("comment-dead-group-subsections", "A dead group ends where a live one would, so its deeper subsections die with it",
-    "␝g1␞1␇␝g2␞2␝␝s␞3␝g3␞4", [g("g1", [["1"]]), g("g3", [["4"]])])
+    "␝g1␞1␇␝g2␞2␚␝s␞3␝g3␞4", [g("g1", [["1"]]), g("g3", [["4"]])])
 dec("comment-label-in-note", "A group line inside a text note is gone and its records fall through to the group before",
     "␝g1␞1␇␂␝g2␃␞2", [g("g1", [["1"], ["2"]])])
 dec("comment-dead-keyed-unit", "A dead keyed unit is dropped from the map",
@@ -413,8 +432,12 @@ can("layout-space", "Whitespace touching a code is layout: legal, not canonical"
     "␞a ␟b", True, False)
 can("layout-newline", "Line breaks between codes are layout",
     "␝g␊␞a", True, False)
-can("note-between-gs", "A note between two GS: two groups at depth one, well-formed, not canonical; stripping the note would read as depth two, so a canonicaliser refuses rather than change depth",
+can("note-between-gs", "A note between two GS: an empty-named group then b; not canonical for the note, and stripping it leaves GS GS, the same two groups",
     "␝␇n␝b␞x", True, False)
+can("empty-group-then-group", "GS GS, an empty-named group then b: canonical",
+    "␝␝b␞x", True, True)
+can("depth-prefix-kept", "A SUB prefix before GS is structure: kept and canonical",
+    "␝a␚␝b␞x", True, True)
 can("keyed-unique", "Keyed record with unique keys", "␞␁a␟1␁b␟2", True, True)
 can("keyed-any-order", "Key order is data, not a canonicality question", "␞␁b␟1␁a␟2", True, True)
 can("keyed-duplicate", "Duplicate key: not canonical", "␞␁a␟1␁a␟2", True, False)
@@ -435,8 +458,8 @@ can("unassigned-code", "Bare unassigned control byte: malformed", "␞a␆b", Fa
 can("so-byte", "SO is permanently unassigned", "␞a␎b", False, False)
 can("dle-before-plain", "DLE outside text must be followed by a code: malformed", "␞␐x␞a␘", False, False)
 can("empty-level", "DLE CAN is the empty level: canonical", "␞␐␘", True, True)
-can("supersession-kept", "Supersession is content: kept and canonical", "␞a␚␟b", True, True)
-can("supersession-side-spelling", "Each side of a supersession is in its one spelling: text around plain is not canonical", "␞␂a␃␚␟b", True, False)
+can("sub-unit-kept", "A SUB prefix before US is structure: kept and canonical", "␞a␚␟b", True, True)
+can("sub-unit-side-spelling", "A unit and its sub-unit are each in their one spelling: text around plain is not canonical", "␞␂a␃␚␟b", True, False)
 can("group-reference-pattern", "A group reference written as a pattern: not canonical", "␞␅␐␝tags␘", True, False)
 can("reference-pattern", "A pattern with a record is canonical", "␞␅␐␝tags␞001␘", True, True)
 can("mixed-record", "A record is positional or keyed, never mixed", "␞a␁k␟v", False, False)
@@ -468,15 +491,20 @@ inv("header-row-mid-group", "A header row is only the first item of a group", "�
 inv("dead-header-row-mid-group", "A dead header row is parsed as if live, so out of place it is the same error", "␝g␞1␇␁␞x␞2")
 inv("two-header-rows", "A group has one header row", "␝g␁␞a␞1␁␞b␞2")
 inv("us-after-keyed-value", "US after a keyed value is a mixed record", "␞␁a␟1␟2")
-inv("sub-before-value", "SUB qualifies the separator after it; before a value it matches nothing", "␞a␚b")
+inv("sub-before-value", "SUB stands before a separator; before a value it matches nothing", "␞a␚b")
 inv("sub-before-text", "SUB before STX is an error", "␞a␚␂b␃")
-inv("sub-at-eof", "SUB at the end of input has nothing to qualify", "␞a␚")
-inv("sub-before-bel", "SUB next to BEL is an error", "␞a␟b␚␇␞c")
-inv("bel-before-sub", "BEL before SUB is an error: SUB is not an element", "␞a␇␚␟b")
-inv("sub-record-nothing-before", "A record supersession needs a record before it in the group", "␝g␚␞x")
-inv("sub-group-nothing-before", "A group supersession needs an earlier group at that depth", "␚␝g␞x")
-inv("sub-file-nothing-before", "A file supersession needs an earlier file", "␚␜f␞x")
-inv("sub-first-keyed-unit", "The first keyed unit of a record has nothing to supersede", "␞␚␁k␟v")
+inv("sub-at-eof", "SUB at the end of input has nothing to prefix", "␞a␚")
+inv("sub-before-bel", "SUB before BEL is an error", "␞a␟b␚␇␞c")
+inv("sub-before-bel-gs", "SUB before BEL GS is an error: BEL comes first and kills the line with its prefix", "␝a␚␇␝g␞1")
+inv("bel-before-sub-unit", "BEL before a sub-unit is an error: a unit cannot be dead", "␞a␇␚␟b")
+inv("sub-record-reserved", "SUB before RS (a sub-record) is reserved", "␞a␚␞b")
+inv("sub-file-reserved", "SUB before FS (a sub-file) is reserved", "␜a␚␜b␞x")
+inv("sub-key-reserved", "SUB before SOH (a sub-key) is reserved", "␞␁k␟v␚␁j␟w")
+inv("sub-unit-in-heading", "The heading's values take no sub-units", "␖␁schema␟a␚␟b␞x")
+inv("depth-first-group", "The first group of a file is at depth one: depth two is a skip", "␚␝g␞x")
+inv("depth-skipped", "A depth may not be skipped: c would be at depth three under a", "␝a␚␚␝c␞1")
+inv("depth-after-fs", "FS restarts the count: the first group of the second file is at depth one", "␝a␚␝b␜f␚␝g␞1")
+inv("sub-unit-depth-skipped", "A sub-unit may not skip a depth either", "␞a␚␚␟c")
 inv("bytes-after-eot", "After EOT only layout, SYN or EM may follow", "␖␞a␄x")
 inv("heading-schema-positional", "A schema level holds a keyed record, not a positional one", "␖␁schema␟␐␞a␟b␘␞x")
 inv("heading-schema-two-records", "A schema level holds one record", "␖␁schema␟␐␞␁name␟a␞␁name␟b␘␞x")
@@ -699,35 +727,37 @@ def _parse_heading(bs, i):
 
 def _parse_record(bs, i):
     """After RS. Returns ([(search_part, repl_part)], next i). A unit is
-    (a, a) for an anchor and (old, new) for a substitution."""
+    (a, a) for an anchor and (old, new) for a unit with its sub-unit."""
     units = []
-    prev_sub = False
     while True:
         a, i = _value(bs, i)
         i = _skip_notes(bs, i)
         if i < len(bs) and bs[i] in (0x01, 0x05, 0x10):
             raise DiffError("keyed unit, reference or level in a diff record")
-        if i < len(bs) and bs[i] == 0x1A:               # supersession
+        if i < len(bs) and bs[i] == 0x1A:               # a sub-unit
             j = _skip_layout(bs, i + 1)
             if j >= len(bs):
                 raise DiffError("SUB at end of input")
+            if bs[j] == 0x1A:
+                raise DiffError("sub-unit of a sub-unit")
             if bs[j] != 0x1F:
-                raise DiffError("supersession at a grain other than the unit")
-            if prev_sub:
-                raise DiffError("chained supersession")
+                raise DiffError("SUB at a reserved grain")
             new, i = _value(bs, j + 1)
             i = _skip_notes(bs, i)
             if i < len(bs) and bs[i] in (0x01, 0x05, 0x10):
                 raise DiffError("keyed unit, reference or level in a diff record")
             if i < len(bs) and bs[i] == 0x1A:
                 j = _skip_layout(bs, i + 1)
+                if j < len(bs) and bs[j] == 0x1A:
+                    raise DiffError("sub-unit of a sub-unit")
                 if j < len(bs) and bs[j] == 0x1F:
-                    raise DiffError("chained supersession")
+                    raise DiffError("two sub-units on one unit")
+                raise DiffError("SUB at a reserved grain")
             if not a and not new:
                 raise DiffError("substitution of nothing by nothing")
-            units.append((a, new)); prev_sub = True
+            units.append((a, new))
         else:
-            units.append((a, a)); prev_sub = False
+            units.append((a, a))
         if i < len(bs) and bs[i] == 0x1F:
             i += 1; continue
         break
@@ -757,7 +787,7 @@ def _parse_diff(bs):
                 i += 1
             continue
         if x == 0x1A:                                   # SUB before FS/GS/RS/SOH
-            raise DiffError("supersession at a grain other than the unit")
+            raise DiffError("SUB at a reserved grain, or a subsection")
         if x == 0x1C:
             path, i = _name(bs, i + 1)
             if not path:
@@ -893,7 +923,7 @@ df("text-note-in-body", "A text note between records is skipped",
    {"a.txt": "foo\n"}, D + "␜a.txt␇␂note ␞ with codes␃␞foo␚␟bar␄", {"a.txt": "bar\n"})
 df("note-in-pattern", "A note after a unit is not a unit",
    {"a.txt": "ab\n"}, D + "␜a.txt␞a␇n␟b␚␟c␄", {"a.txt": "ac\n"})
-df("note-after-substitution", "A note after a superseding unit is a note",
+df("note-after-substitution", "A note after a sub-unit is a note",
    {"a.txt": "ab\n"}, D + "␜a.txt␞a␟b␚␟c␇n␄", {"a.txt": "ac\n"})
 df("commit-tolerated", "An ETB between records is a no-op",
    {"a.txt": "foo\n"}, D + "␜a.txt␞foo␚␟bar␗␄", {"a.txt": "bar\n"})
@@ -923,9 +953,11 @@ df("level-refused", "A level refuses",
    {"a.txt": "foo\n"}, D + "␜a.txt␞␐␞foo␘␚␟bar␄", error=True)
 df("reference-refused", "A reference refuses",
    {"a.txt": "foo\n"}, D + "␜a.txt␞␅foo␚␟bar␄", error=True)
-df("chained-supersession-refused", "A chained supersession refuses: the file never held the middle",
+df("two-sub-units-refused", "Two sub-units on one unit refuse: one old has one new",
    {"a.txt": "foo\n"}, D + "␜a.txt␞foo␚␟bar␚␟baz␄", error=True)
-df("record-grain-refused", "Supersession at the record grain is reserved and refuses",
+df("nested-sub-unit-refused", "A sub-unit of a sub-unit refuses",
+   {"a.txt": "foo\n"}, D + "␜a.txt␞foo␚␟bar␚␚␟baz␄", error=True)
+df("record-grain-refused", "SUB before RS is reserved and refuses",
    {"a.txt": "foo\n"}, D + "␜a.txt␞foo␚␞bar␄", error=True)
 
 # ------------------------------------------------------------------ write

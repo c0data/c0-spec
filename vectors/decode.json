@@ -941,8 +941,8 @@
     },
     {
       "name": "reference-depth",
-      "desc": "GS repetition in a pattern is depth, as in the document",
-      "bytes": "1e611f05101d646f63731d1d696e74726f1e3318",
+      "desc": "SUB before GS in a pattern is depth, as in the document",
+      "bytes": "1e611f05101d646f63731a1d696e74726f1e3318",
       "file": null,
       "groups": [
         {
@@ -1119,8 +1119,8 @@
       ]
     },
     {
-      "name": "supersede-unit",
-      "desc": "SUB before US: the unit before is superseded by the unit after; a document model reports the result",
+      "name": "sub-unit",
+      "desc": "SUB before US: a sub-unit hangs off the unit before it and is not a unit of the record",
       "bytes": "1e611f621a1f63",
       "file": null,
       "groups": [
@@ -1130,15 +1130,20 @@
           "records": [
             [
               "a",
-              "c"
+              {
+                "value": "b",
+                "subs": [
+                  "c"
+                ]
+              }
             ]
           ]
         }
       ]
     },
     {
-      "name": "supersede-deletion",
-      "desc": "An empty superseding unit deletes: the result keeps the empty unit",
+      "name": "sub-unit-empty",
+      "desc": "A sub-unit may be empty (a diff's deletion)",
       "bytes": "1e6f6c641a1f1e656e64",
       "file": null,
       "groups": [
@@ -1147,7 +1152,12 @@
           "headers": null,
           "records": [
             [
-              ""
+              {
+                "value": "old",
+                "subs": [
+                  ""
+                ]
+              }
             ],
             [
               "end"
@@ -1157,8 +1167,8 @@
       ]
     },
     {
-      "name": "supersede-insertion",
-      "desc": "The empty first unit superseded by a value: an insertion",
+      "name": "sub-unit-on-empty-first",
+      "desc": "The first unit exists even when empty, so it can hold a sub-unit (a diff's insertion)",
       "bytes": "1e1a1f6e6577",
       "file": null,
       "groups": [
@@ -1167,15 +1177,20 @@
           "headers": null,
           "records": [
             [
-              "new"
+              {
+                "value": "",
+                "subs": [
+                  "new"
+                ]
+              }
             ]
           ]
         }
       ]
     },
     {
-      "name": "supersede-middle",
-      "desc": "Arity counts the result: the superseded unit is not counted",
+      "name": "sub-unit-not-counted",
+      "desc": "Arity counts units: a US after a sub-unit begins the next unit",
       "bytes": "1e611f621a1f1f63",
       "file": null,
       "groups": [
@@ -1185,7 +1200,12 @@
           "records": [
             [
               "a",
-              "",
+              {
+                "value": "b",
+                "subs": [
+                  ""
+                ]
+              },
               "c"
             ]
           ]
@@ -1193,8 +1213,8 @@
       ]
     },
     {
-      "name": "supersede-chain",
-      "desc": "Supersessions chain; the last stands",
+      "name": "sub-units-two",
+      "desc": "Two SUB US in a row are two sub-units of the same unit",
       "bytes": "1e611a1f621a1f63",
       "file": null,
       "groups": [
@@ -1203,16 +1223,22 @@
           "headers": null,
           "records": [
             [
-              "c"
+              {
+                "value": "a",
+                "subs": [
+                  "b",
+                  "c"
+                ]
+              }
             ]
           ]
         }
       ]
     },
     {
-      "name": "supersede-record",
-      "desc": "SUB before RS: the record before is superseded by the record after",
-      "bytes": "1e611f621a1e611f63",
+      "name": "sub-unit-nested",
+      "desc": "Two SUB is a sub-unit of the sub-unit before",
+      "bytes": "1e611a1f621a1a1f63",
       "file": null,
       "groups": [
         {
@@ -1220,17 +1246,26 @@
           "headers": null,
           "records": [
             [
-              "a",
-              "c"
+              {
+                "value": "a",
+                "subs": [
+                  {
+                    "value": "b",
+                    "subs": [
+                      "c"
+                    ]
+                  }
+                ]
+              }
             ]
           ]
         }
       ]
     },
     {
-      "name": "supersede-keyed-unit",
-      "desc": "SUB before SOH: the keyed unit before is superseded",
-      "bytes": "1e016b1f761a016b1f77",
+      "name": "sub-unit-keyed-value",
+      "desc": "A keyed unit's value takes sub-units the same way",
+      "bytes": "1e016e616d651f416c6963651a1f616c696173",
       "file": null,
       "groups": [
         {
@@ -1240,8 +1275,13 @@
             {
               "keys": [
                 [
-                  "k",
-                  "w"
+                  "name",
+                  {
+                    "value": "Alice",
+                    "subs": [
+                      "alias"
+                    ]
+                  }
                 ]
               ]
             }
@@ -1250,59 +1290,9 @@
       ]
     },
     {
-      "name": "supersede-group",
-      "desc": "SUB before GS: the group before, at that depth, is superseded",
-      "bytes": "1d671e781a1d671e79",
-      "file": null,
-      "groups": [
-        {
-          "name": "g",
-          "headers": null,
-          "records": [
-            [
-              "y"
-            ]
-          ]
-        }
-      ]
-    },
-    {
-      "name": "supersede-file",
-      "desc": "SUB before FS: the file before is superseded",
-      "bytes": "1c661d671e781a1c661d671e79",
-      "file": "f",
-      "groups": [
-        {
-          "name": "g",
-          "headers": null,
-          "records": [
-            [
-              "y"
-            ]
-          ]
-        }
-      ],
-      "files": [
-        {
-          "name": "f",
-          "groups": [
-            {
-              "name": "g",
-              "headers": null,
-              "records": [
-                [
-                  "y"
-                ]
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "supersede-in-heading",
-      "desc": "Supersession is legal in the heading too",
-      "bytes": "1601736368656d611f611a01736368656d611f621e78",
+      "name": "sub-unit-note",
+      "desc": "A note after a sub-unit is a note; the next US begins a unit",
+      "bytes": "1e611a1f62076e1f63",
       "file": null,
       "groups": [
         {
@@ -1310,22 +1300,97 @@
           "headers": null,
           "records": [
             [
-              "x"
+              {
+                "value": "a",
+                "subs": [
+                  "b"
+                ]
+              },
+              "c"
             ]
           ]
         }
-      ],
-      "heading": [
-        [
-          "schema",
-          "b"
-        ]
       ]
     },
     {
-      "name": "gs-depth",
-      "desc": "GS repetition is depth; subsections belong to the group",
-      "bytes": "1d63311e70311d1d73311e70321d63321e7033",
+      "name": "sub-unit-layout",
+      "desc": "Layout may follow SUB as it follows every code",
+      "bytes": "1e611a201f62",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              {
+                "value": "a",
+                "subs": [
+                  "b"
+                ]
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sub-unit-text",
+      "desc": "A sub-unit is a value under the ordinary rules: text where needed",
+      "bytes": "1e02612062031a1f0263206403",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              {
+                "value": "a b",
+                "subs": [
+                  "c d"
+                ]
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sub-unit-level",
+      "desc": "A sub-unit may hold a level",
+      "bytes": "1e611a1f101e7818",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": [
+            [
+              {
+                "value": "a",
+                "subs": [
+                  {
+                    "level": {
+                      "headers": null,
+                      "records": [
+                        [
+                          "x"
+                        ]
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "depth-subsection",
+      "desc": "SUB before GS is depth; a subsection belongs to the group before it",
+      "bytes": "1d63311e70311a1d73311e70321d63321e7033",
       "file": null,
       "groups": [
         {
@@ -1362,7 +1427,7 @@
     {
       "name": "header-not-inherited",
       "desc": "A header row names its own group's fields; a subsection inherits nothing",
-      "bytes": "1d63011e611f621e311f321d1d731e331f34",
+      "bytes": "1d63011e611f621e311f321a1d731e331f34",
       "file": null,
       "groups": [
         {
@@ -1393,9 +1458,9 @@
       ]
     },
     {
-      "name": "gs-depth-skipped",
-      "desc": "A skipped depth is reported as nothing: c is at depth three, no group at depth two",
-      "bytes": "1d611d1d1d631e31",
+      "name": "depth-three",
+      "desc": "Each SUB is one level; a depth-one group closes the deeper ones",
+      "bytes": "1d611a1d621a1a1d631e311d641e32",
       "file": null,
       "groups": [
         {
@@ -1404,7 +1469,7 @@
           "records": [],
           "sections": [
             {
-              "name": null,
+              "name": "b",
               "headers": null,
               "records": [],
               "sections": [
@@ -1419,6 +1484,131 @@
                 }
               ]
             }
+          ]
+        },
+        {
+          "name": "d",
+          "headers": null,
+          "records": [
+            [
+              "2"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "depth-layout",
+      "desc": "Layout may follow each SUB of the prefix",
+      "bytes": "1d611a201d671e31",
+      "file": null,
+      "groups": [
+        {
+          "name": "a",
+          "headers": null,
+          "records": [],
+          "sections": [
+            {
+              "name": "g",
+              "headers": null,
+              "records": [
+                [
+                  "1"
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "empty-group-then-group",
+      "desc": "GS GS is an empty-named group then a group: repetition is an empty element for every code",
+      "bytes": "1d1d621e78",
+      "file": null,
+      "groups": [
+        {
+          "name": "",
+          "headers": null,
+          "records": []
+        },
+        {
+          "name": "b",
+          "headers": null,
+          "records": [
+            [
+              "x"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "depth-after-dead-group",
+      "desc": "A dead subgroup does not break the file; the next depth-one group follows",
+      "bytes": "1d61071a1d781d621e31",
+      "file": null,
+      "groups": [
+        {
+          "name": "a",
+          "headers": null,
+          "records": []
+        },
+        {
+          "name": "b",
+          "headers": null,
+          "records": [
+            [
+              "1"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "dead-subgroup-line",
+      "desc": "BEL kills the group line whole, SUB prefix included: the subgroup and its record die",
+      "bytes": "1d611e31071a1d731e321d621e33",
+      "file": null,
+      "groups": [
+        {
+          "name": "a",
+          "headers": null,
+          "records": [
+            [
+              "1"
+            ]
+          ]
+        },
+        {
+          "name": "b",
+          "headers": null,
+          "records": [
+            [
+              "3"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "dead-group-dead-subsection",
+      "desc": "A subsection one deeper than a dead group is not a skip as written; it dies with its parent",
+      "bytes": "1d78071a1d64726166741a1a1d6e6f7465731d791e31",
+      "file": null,
+      "groups": [
+        {
+          "name": "x",
+          "headers": null,
+          "records": []
+        },
+        {
+          "name": "y",
+          "headers": null,
+          "records": [
+            [
+              "1"
+            ]
           ]
         }
       ]
@@ -2014,7 +2204,7 @@
     {
       "name": "comment-dead-group-subsections",
       "desc": "A dead group ends where a live one would, so its deeper subsections die with it",
-      "bytes": "1d67311e31071d67321e321d1d731e331d67331e34",
+      "bytes": "1d67311e31071d67321e321a1d731e331d67331e34",
       "file": null,
       "groups": [
         {

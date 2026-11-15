@@ -1,7 +1,15 @@
 # Proposal: SUB GS is depth; supersession is withdrawn; the diff needs no mark
 
-**Status:** Direction agreed 2026-11-14 (SUB GS for depth, supersession
-withdrawn, C0DIFF without a mark). **Grammar points all decided
+**Status:** Decided and written, with one amendment. 2026-11-14: SUB GS
+for depth, supersession withdrawn (c0-spec `ccf5ae3`). 2026-11-15: the
+three diff points below (arity, mark, MARK.md) were closed together by a
+reading the user put forward: SUB means **subordinate** at every grain,
+the GS case being depth and the US case a **sub-unit**, so the diff's
+`new` is the sub-unit of `old` and every diff byte stands; SUB RS/FS/SOH
+are reserved with that meaning (c0-spec `6da01b0`, DESIGN.md
+Subordinates). The "C0DIFF by position" section below is therefore not
+taken; the vector plan was redone in `gen.py` (291 cases). Earlier status:
+**Grammar points all decided
 2026-11-14** (see "Open points on the grammar", each marked): layout may
 follow SUB as it follows every code; skipping a depth is an error, measured
 against the previous group as written, dead ones included; `␇␚␝b` is a dead
