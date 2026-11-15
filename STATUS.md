@@ -148,8 +148,13 @@ package version.
    `c0_sub_iter`, `c0_record_unit[_get]`, `c0_next_unit_with_subs`,
    `c0_next_pair_with_subs`, `c0_unit_subs`/`c0_next_sub`,
    `c0_build_sub_unit`; `c0_record_written_units`, `sup_grains`,
-   `c0_build_supersede` removed). Python and Ruby in flight over C
-   `071fe25`. c0-fmt builds and runs against c0-cr with no change (its
+   `c0_build_supersede` removed), Python c0-py `ad57afb` (42 tests;
+   `Unit.subs`, `Record.unit(i|key|column)`, `Builder.gs(name, depth=)`,
+   `sub_unit`; `supersession_grains` gone), Ruby c0-rb `1637dad` (330
+   runs, 2671 assertions; `Unit#subs`, `Record#unit(n|key)`, `Builder#gs(name,
+   depth:)`, `sub_unit`; `supersede`, `supersession_grains` gone), both
+   over C `071fe25`. **ALL SEVEN PORTED 2026-11-15**, every suite re-run
+   by hand. c0-fmt builds and runs against c0-cr with no change (its
    JSON/CSV exports see units only). Found by the ports and fixed
    everywhere, with vectors: a sub-unit in a pattern record is refused
    (fields hide sub-units, so the name check missed it); a dead keyed unit
