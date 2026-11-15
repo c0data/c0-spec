@@ -326,6 +326,33 @@
       "committed_end": 0,
       "torn": false,
       "blocks": []
+    },
+    {
+      "name": "syn-mid-stream-tears",
+      "desc": "A SYN inside a stream tears the uncommitted bytes before it: they are no block and deliver nothing; the ETB after the new heading commits it",
+      "bytes": "1e61160173686170651f73747265616d17",
+      "committed_end": 17,
+      "torn": false,
+      "blocks": [
+        "160173686170651f73747265616d"
+      ],
+      "records": []
+    },
+    {
+      "name": "syn-mid-stream-then-record",
+      "desc": "After a mid-stream SYN the new document's blocks are delivered as usual",
+      "bytes": "1e61160173686170651f73747265616d171e6217",
+      "committed_end": 20,
+      "torn": false,
+      "blocks": [
+        "160173686170651f73747265616d",
+        "1e62"
+      ],
+      "records": [
+        [
+          "b"
+        ]
+      ]
     }
   ]
 }

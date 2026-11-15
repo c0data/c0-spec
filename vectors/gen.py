@@ -592,6 +592,10 @@ st("tail-only-layout", "A tail of layout alone is not torn", "␞a␗␊", 3, Fa
 st("tail-eot", "EOT after the last commit closes the log and is not torn", "␞a␗␄", 3, False, ["␞a"], [["a"]])
 st("tail-comment", "A comment after the last commit is not torn", "␞a␗␇bye", 3, False, ["␞a"], [["a"]])
 st("empty-stream", "Empty buffer: no commits, not torn", "", 0, False, [])
+st("syn-mid-stream-tears", "A SYN inside a stream tears the uncommitted bytes before it: they are no block and deliver nothing; the ETB after the new heading commits it",
+   "␞a␖␁shape␟stream␗", 17, False, ["␖␁shape␟stream"], [])
+st("syn-mid-stream-then-record", "After a mid-stream SYN the new document's blocks are delivered as usual",
+   "␞a␖␁shape␟stream␗␞b␗", 20, False, ["␖␁shape␟stream", "␞b"], [["b"]])
 
 # ----------------------------------------------------------------- nested
 nested = []
