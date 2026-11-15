@@ -136,14 +136,25 @@ package version.
    add the depth prefix (`sections` via SUB GS, no skipping, no null-name
    sections) and sub-units (`Unit#subs` or equivalent, nested), keep the
    diff applier's bytes and rename its errors; builder `gs(name, depth:)`
-   or `sub` before `gs`/`us`. **Ported so far: Crystal c0-cr `91b45a1`**
-   (318 specs, all 291 vectors; `Unit#subs`, `Record#unit(n|key)`,
-   `Builder#gs(name, depth:)`, `Builder#sub_unit`; `supersede` and
-   `Parser#supersessions` gone); c0-fmt builds and runs against it with no
-   change (its JSON/CSV exports see units only, sub-units are not units).
-   JS, Rust, Go, C in flight 2026-11-15; Python and Ruby follow over C.
-   Until all are in, item 1 below describes what is built in the other
-   ports (c0-spec 7b13feb), not where the spec is.
+   or `sub` before `gs`/`us`. **Ported 2026-11-15, all against this
+   repo at `f677533` (295 vectors): Crystal c0-cr `b36428c` (322 specs;
+   `Unit#subs`, `Record#unit(n|key)`, `Builder#gs(name, depth:)`,
+   `Builder#sub_unit`), JS c0-js `78927f8` (367 tests; `RecordUnit.subs`,
+   `Record.unit`/`keyUnit`, `Builder.gs(name, depth)`, `subUnit`), Rust
+   c0-rs `c8367af` (57 tests, clippy clean; `Unit::subs`, `Record::unit`/
+   `get_unit`, `Builder::gs_name_at`, `sub_unit[_at]`; `Unit` no longer
+   `Copy`), Go c0-go `52d1c54` (295 subtests; `Unit.Subs`, `Record.Unit`/
+   `UnitByKey`, `Builder.SubUnit[At]`), C c0-c `071fe25` (`c0_unit`,
+   `c0_sub_iter`, `c0_record_unit[_get]`, `c0_next_unit_with_subs`,
+   `c0_next_pair_with_subs`, `c0_unit_subs`/`c0_next_sub`,
+   `c0_build_sub_unit`; `c0_record_written_units`, `sup_grains`,
+   `c0_build_supersede` removed). Python and Ruby in flight over C
+   `071fe25`. c0-fmt builds and runs against c0-cr with no change (its
+   JSON/CSV exports see units only). Found by the ports and fixed
+   everywhere, with vectors: a sub-unit in a pattern record is refused
+   (fields hide sub-units, so the name check missed it); a dead keyed unit
+   takes its sub-units; BEL GS kills exactly one group line. NOTHING
+   PUSHED; push order c0-spec, c0-cr, c0-c, then the rest.
 
 1. **C0DIFF review: decided and written, 2026-11-12.** DIFF.md,
    GRAMMAR.md and DESIGN.md are rewritten: no `diff-body`, supersession in
