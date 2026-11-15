@@ -9,7 +9,8 @@ states what a diff may not hold. `DESIGN.md` defines the bytes and
 
 Instead of line numbers, which shift, a diff gives **anchored patterns**:
 literal text that must match exactly once, with the parts to change
-marked inside it by supersession (`old␚␟new`, DESIGN.md, Supersession).
+marked inside it by a sub-unit (`old␚␟new`, DESIGN.md, Subordinates):
+the unit is what the file holds, its sub-unit what it will hold.
 
     ␖␁shape␟diff
     ␜greeting.txt
@@ -39,10 +40,10 @@ shape does.
   may not escape that directory. A path is never empty.
 - **RS** begins a **record**, one anchored pattern. Records within a file
   are sequential.
-- **US** separates the **units** of a pattern. A unit that neither is
-  superseded nor supersedes is an **anchor**. A superseded unit with the
-  unit that supersedes it (`old␚␟new`) is a **substitution**: `old` is
-  what the file holds, `new` what it will hold.
+- **US** separates the **units** of a pattern. A unit with no sub-unit
+  is an **anchor**. A unit with its sub-unit (`old␚␟new`, SUB before the
+  US) is a **substitution**: `old` is what the file holds, `new` what it
+  will hold. The sub-unit is not a unit of the record.
 - **SYN**, the heading and **EOT** are as in every C0DATA document. The
   heading SHOULD carry `shape␟diff`; a diff tool accepts an unspecified
   shape and refuses a contradicting one. A generic C0DATA reader given a
@@ -66,9 +67,9 @@ unit, nothing between the codes; `␂␃` is never needed.
 
 ## Records
 
-A record's **search text** is the concatenation of its anchors and
-superseded units, in order. Its **replacement** is the same with each
-superseding unit in place of the unit it supersedes.
+A record's **search text** is the concatenation of its units, in order,
+anchors and olds alike. Its **replacement** is the same with each
+sub-unit in place of the unit that holds it.
 
 | Unit | Search contributes | Replacement contributes |
 |------|--------------------|-------------------------|
@@ -124,10 +125,10 @@ meaning. A diff tool refuses a diff holding:
 - a header row;
 - GS;
 - a record before the first FS, or an empty path;
-- a chained supersession, `a␚␟b␚␟c`: its search text would hold `b`,
-  which the file never held;
-- supersession at any grain but the unit: `␚␞`, `␚␝`, `␚␜`, `␚␁` (the
-  record grain is reserved for a diff against a C0DATA target);
+- two sub-units on one unit, `a␚␟b␚␟c`, or a sub-unit of a sub-unit,
+  `a␚␟b␚␚␟c`: one old has one new (the base grammar, DESIGN.md,
+  Subordinates; the record grain `␚␞`, reserved there, is the natural
+  slot for a diff against a C0DATA target);
 - a dead record or a dead file line. A diff is an instruction, and a hunk
   that reads as live but does not apply is a hazard: one byte, often
   rendered as nothing, would make it inert, and a diff is meant to apply
@@ -187,12 +188,12 @@ the bytes.
 
 A diff is a C0DATA document and nothing in it means anything it does not
 mean elsewhere. FS is a file, RS a record, US a unit, text the mechanism
-that protects whitespace, and SUB before US is supersession, the base
-grammar's rule that the unit before is replaced by the unit after. The
-diff adds only the reading: a record is a pattern, its superseded units
-are what the file holds and its superseding units what it will hold.
-Supersession is content, so a diff hashes as written: canonicalising a
-diff never applies it.
+that protects whitespace, and SUB before US is a sub-unit, the base
+grammar's rule that the unit after is subordinate to the unit before. The
+diff adds only the reading: a record is a pattern, its units are what the
+file holds and their sub-units what it will hold. A SUB prefix is
+structure, so a diff hashes as written: canonicalising a diff never
+applies it.
 
 A diff is data about data: a C0DIFF document can be stored, hashed and
 transmitted like any other.

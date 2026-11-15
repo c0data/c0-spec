@@ -60,7 +60,7 @@ This revision (2026-10) is the pre-1.0 redesign. Its reasoning is recorded in
 | 0x17 | ETB  | ␗     | Commit marker (stream mode block terminator)             |
 | 0x18 | CAN  | ␘     | Close a nested level                                     |
 | 0x19 | EM   | ␙     | End of medium: a raw blob follows to end of container    |
-| 0x1A | SUB  | ␚     | Depth: each SUB before a GS puts the group one level deeper |
+| 0x1A | SUB  | ␚     | Subordinate: the element after is a child of the element before (GS: subsection, US: sub-unit) |
 | 0x1C | FS   | ␜     | File separator                                           |
 | 0x1D | GS   | ␝     | Group / table / section separator                        |
 | 0x1E | RS   | ␞     | Record / row separator                                   |
@@ -569,10 +569,11 @@ a dead record. A note has content: a BEL directly followed by a code is
 always the dead marker, so `␇␇␞x` is an error (BEL is not an element), and
 a BEL at the end of input is an error. The codes that may follow a BEL are
 FS, GS, SUB (a group line with its depth prefix: `␇␚␝b` is a dead group
-at depth two, the prefix dying with the line, and `␚␇␝b` is an error), RS,
-SOH, DLE and plain or text content; before any other code (US, ETX, CAN,
-ENQ, ETB, EOT, SYN, EM) a BEL is an error: those are not elements, and
-framing cannot be commented out.
+at depth two, the prefix dying with the line; `␚␇␝b` is an error, and so
+is `␇␚␟`, since a unit cannot be dead), RS, SOH, DLE and plain or text
+content; before any other code (US, ETX, CAN, ENQ, ETB, EOT, SYN, EM) a
+BEL is an error: those are not elements, and framing cannot be commented
+out.
 
 **A note is never a unit.** Wherever a note sits, the reader skips it and
 the structure around it is what the codes say: `␞Alice␟␇old␟100` has two
@@ -585,36 +586,83 @@ comments is a tool option, not a reader rule; canonicalisation strips
 notes and dead elements alike.
 
 
-## Depth (SUB)
+## Subordinates (SUB)
 
-**SUB (0x1A)** outside text stands only before GS, and each one puts the
-group a level deeper: `␝a` is a group at depth one, `␚␝b` at depth two,
-`␚␚␝c` at depth three. Depth is a count of SUB, read forward. Layout may
-follow each SUB as it follows every code, so `␚ ␚ ␝c` is depth three in
-pretty form.
+**SUB (0x1A)** outside text stands before a separator and makes the
+element after it **subordinate** to the element before, at that code's
+grain. That is its one meaning. What the subordinate is called depends on
+the grain:
+
+| Written | The element after is | In 1.0 |
+|---|---|---|
+| `␝a␚␝b` | a **subsection** of group `a`: depth | open |
+| `␞a␟b␚␟c` | a **sub-unit** of `b`: an annotation | open |
+| `␞a␟b␚␞x␟y` | a sub-record of the record `a`,`b` | reserved |
+| `␜src␚␜main.c` | a sub-file of `src` | reserved |
+| `␞␁k␟v␚␁j␟w` | a sub-key of `k` | reserved |
+
+Each SUB is one level: `␚␚␝c` is a sub-subsection, `␚␚␟c` a sub-unit of a
+sub-unit. Depth is a count of SUB, read forward. Layout may follow each
+SUB as it follows every code, so `␚ ␚ ␝c` is depth three in pretty form.
+
+SUB's 1963 meaning is "substitute": the character so marked stands in for
+another. Lifted to C0DATA it reads as *subordinate*: the element so
+marked stands under the one before it, and in the shapes that use it to
+substitute (C0DIFF, C0MARK) the subordinate is the replacement. Repeating
+GS for depth was the first design, and it collided with the rule every
+other code obeys, that a repeated code is an empty element (`␟␟` an empty
+unit, `␞␞` an empty record): under it `␝␝b` could not be an empty-named
+group followed by `b`, and canonicalisers had to refuse to bring two GS
+together. With depth on SUB the rule holds for GS too: `␝␝b` is group `""`
+then group `b`, and nothing is refused.
+
+### Subsections
 
     ␝Chapter 1          depth 1
     ␚␝Section 1.1       depth 2
     ␚␚␝Topic 1.1.1      depth 3
     ␝Chapter 2          depth 1
 
-SUB's 1963 meaning is "substitute": the character so marked stands in for
-another. Lifted to C0DATA it reads as *subordinate*: the group so marked
-stands under the one before it. Repeating GS for depth was the first
-design, and it collided with the rule every other code obeys, that a
-repeated code is an empty element (`␟␟` an empty unit, `␞␞` an empty
-record): under it `␝␝b` could not be an empty-named group followed by
-`b`, and canonicalisers had to refuse to bring two GS together. With
-depth on SUB the rule holds for GS too: `␝␝b` is group `""` then group
-`b`, and nothing is refused.
+A subsection belongs to the group before it; a header row belongs to the
+group line it follows and is not inherited by its subsections (The header
+row). The first group line of a file is at depth one, and FS restarts the
+count.
 
-**No skipping.** A group's depth is at most one more than the depth of
-the group line before it in the same file, dead or not, and the first
-group line of a file is at depth one; FS restarts the count. A deeper
-group line is an error, "depth skipped": `␝a␚␚␝c` and `␜f␚␝g` are refused,
-and a reader never invents a nameless section to stand between. The rule
-counts dead group lines as written, so killing a section with its
-subsections is one BEL:
+### Sub-units
+
+A sub-unit hangs off the unit before it and is not a unit of the record:
+`␞a␟b␚␟c` is two units, `a` and `b`, and `b` holds `c`. The base format
+says only that `c` is subordinate to `b`. What that means is the shape's:
+in a C0DIFF the sub-unit of `old` is `new`, the text that replaces it
+(C0DIFF below); in C0MARK it is the editor's replacement for the marked
+text; in a data document it is an annotation the document model carries
+with its unit. A unit may hold several, `␞a␚␟b␚␟c` is `a` with the
+sub-units `b` and `c`, and a sub-unit may hold its own, `␞a␚␟b␚␚␟c`. The
+first unit of a record exists even when empty, so `␞␚␟c` is an empty unit
+holding `c`, which is how a diff spells an insertion; a sub-unit may be
+empty, `␞old␚␟`, which is how it spells a deletion. A keyed unit's value
+takes sub-units the same way: `␞␁name␟Alice␚␟alias`. Arity counts units:
+"N separators, N+1 units" counts the US that begin units, not those that
+begin sub-units.
+
+### Reserved grains
+
+SUB before RS, FS or SOH is an error in this version. The meaning is
+fixed now so that a later version can open a grain without a redesign: a
+sub-record is a record under the record before it (a nested block or list
+item in the document shape, a child row in a table), a sub-file a file
+under a file, a sub-key a keyed unit under a keyed unit. Streams keep
+SUB RS closed in any case: a child arriving after its parent's commit
+would attach across blocks.
+
+### Rules at every grain
+
+**No skipping.** An element's depth is at most one more than the depth of
+the element before it at that grain, dead or not, and the first is at
+depth one. A deeper element is an error, "depth skipped": `␝a␚␚␝c`,
+`␜f␚␝g` and `␞a␚␚␟c` are refused, and a reader never invents a nameless
+element to stand between. The rule counts dead elements as written, so
+killing a section with its subsections is one BEL:
 
     ␝x␇␚␝draft␚␚␝notes␝y      draft and notes die together; x and y remain
 
@@ -623,12 +671,15 @@ a dead group takes everything under it (Comments). Stripping dead groups
 can never create a skip: a dead group at depth d takes every deeper group
 after it, so the next surviving group is at depth d or less.
 
-**BEL and SUB.** BEL kills the whole group line, prefix included: `␇␚␝b`
-is a dead group at depth two. `␚␇␝b` is an error, as is SUB before any
-other byte or at the end of input: SUB has one meaning and one place.
+**BEL and SUB.** BEL kills the whole line, prefix included: `␇␚␝b` is a
+dead group at depth two. `␚␇␝b` is an error, as is SUB before any other
+byte or at the end of input. A unit is not an element BEL can kill, so
+`␇␚␟c` is an error as `␇␟` is.
 
 **Canonical form.** The prefix is structure, not layout, and is kept as
-written; `␚␝b` and `␝b` are different documents.
+written: `␚␝b` and `␝b` are different documents, and so are `␞a␚␟b` and
+`␞a␟b`. A diff therefore hashes as written; canonicalising a diff never
+applies it.
 
 
 ## Document Mode (Depth via SUB)
@@ -657,7 +708,7 @@ sub-elements (list items) within that block.
     ␄
 
 Depth is read the same in every shape: `␚␝g` is group `g` at depth two,
-and a depth is never skipped (see Depth). A header row belongs to the
+and a depth is never skipped (see Subordinates). A header row belongs to the
 group line it follows, not to its subsections (see The header row).
 
 
@@ -940,14 +991,15 @@ know.
 
 A diff is files of records and parses under the base grammar like any
 document. In it FS begins a file, RS a record that is one anchored
-pattern, US separates its units, and supersession at the unit grain
-(`old␚␟new`) is the substitution: the superseded unit is what the file
-holds, the superseding unit what it will hold, and a unit that is neither
-is an anchor. Anchors, olds and news are values under the ordinary rules,
-plain or text; paths are names. Every slot the diff does not use (keyed
-units, levels, references, header rows, GS, supersession at any other
-grain, dead records and dead file lines) is an error in a diff, so each
-stays free for a later meaning. Comments and framing apply as everywhere.
+pattern, US separates its units, and a sub-unit (`old␚␟new`,
+Subordinates) is the substitution: the unit is what the file holds, its
+sub-unit what it will hold, and a unit with no sub-unit is an anchor.
+Anchors, olds and news are values under the ordinary rules, plain or
+text; paths are names. Every slot the diff does not use (keyed units,
+levels, references, header rows, GS, two sub-units on one unit or a
+sub-unit of a sub-unit, dead records and dead file lines) is an error in
+a diff, so each stays free for a later meaning. Comments and framing
+apply as everywhere.
 The matching, constraint and atomicity rules are in `DIFF.md`; the vectors
 are `vectors/diff.json`.
 
@@ -978,7 +1030,7 @@ C0DATA is a system, not a single format. The same vocabulary expresses:
 | Nested     | DLE … CAN, any inner codes      | JSON objects, arrays  |
 | Text       | STX/ETX                         | quoted strings, blobs in transit |
 | Reference  | ENQ, a level pattern for paths  | foreign keys, links   |
-| Diff       | FS, RS, US                      | unified diff, patches |
+| Diff       | FS, RS, US, SUB                 | unified diff, patches |
 | Stream     | RS, US, ETB                     | NDJSON, SSE, WAL      |
 | Container  | SYN heading, EM                 | tar, zip, PDF streams |
 

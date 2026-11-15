@@ -1,12 +1,13 @@
 # C0MARK Specification (Proposal)
 
 **Status:** proposal for a 1.x release, not normative, nothing built.
-Named 2026-11-08; grown from `notes/PROPOSAL-SUPERSESSION.md`. It depends on
-**supersession** (SUB before a separator or opener: the element before is
-superseded by the element after) being a rule of the base grammar, which
-is decided in direction (2026-11-10, replacing the earlier pair
-`value SUB value`) and not yet in `GRAMMAR.md`. Nothing here is adopted
-until it appears in `DESIGN.md` and `GRAMMAR.md`.
+Named 2026-11-08; grown from `notes/PROPOSAL-SUPERSESSION.md`. It depends
+on the **sub-unit** (SUB before US: the unit after is subordinate to the
+unit before; DESIGN.md, Subordinates), which has been in the base grammar
+since 2026-11-15. This text predates that decision and still says
+"superseded" and "superseding": read them as the unit and its sub-unit.
+The bytes are unchanged. Nothing here is adopted until it is rewritten
+against `DESIGN.md` and `GRAMMAR.md`.
 
 C0MARK is editor's marks in a C0DATA document, in the proofreader's
 sense: an insertion, a deletion, a substitution, a comment, written where

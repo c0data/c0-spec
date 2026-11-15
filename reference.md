@@ -29,7 +29,7 @@ full specification and future directions.
 | 0x17 | ETB | ␗ | Commit marker (stream mode) |
 | 0x18 | CAN | ␘ | Close a nested level |
 | 0x19 | EM  | ␙ | End of medium: raw blob follows |
-| 0x1A | SUB | ␚ | Depth: each SUB before a GS puts the group one level deeper |
+| 0x1A | SUB | ␚ | Subordinate: the element after is a child of the element before (GS: subsection, US: sub-unit) |
 | 0x1C | FS  | ␜ | File separator |
 | 0x1D | GS  | ␝ | Group / Table / Section separator |
 | 0x1E | RS  | ␞ | Record / Row separator |
@@ -148,7 +148,7 @@ expresses multiple common data shapes.
 | Nested     | DLE … CAN, any inner codes | JSON objects, arrays |
 | Text       | STX/ETX                    | quoted strings       |
 | Reference  | ENQ, a level pattern for paths | foreign keys, links  |
-| Diff       | FS, RS, US                 | unified diff, patches|
+| Diff       | FS, RS, US, SUB            | unified diff, patches|
 | Stream     | RS, US, ETB                | NDJSON, SSE, WAL     |
 | Container  | SYN heading, EM            | tar, zip             |
 
@@ -340,12 +340,12 @@ specified in full in [DIFF.md](DIFF.md).
 ```
 
 - `␜path` begins a file. `␞` begins a record, one anchored pattern whose
-  US-separated units are anchors or substitutions, `old␚␟new`
-  (supersession: the unit before the US is replaced by the unit after).
+  US-separated units are anchors or substitutions, `old␚␟new` (a
+  sub-unit: `new` is subordinate to `old` and, in a diff, replaces it).
   The pattern must match exactly once after the previous record's match.
 - Empty old inserts; empty new deletes; a record with no `␚` asserts.
 - Everything the diff does not use (keyed units, levels, references,
-  header rows, GS, other grains of supersession, dead records or file
+  header rows, GS, two sub-units on one unit, dead records or file
   lines) is an error in a diff. There is no replace-all: a tool expands
   one into anchored records against the target.
 - The whole diff is validated before anything is written.

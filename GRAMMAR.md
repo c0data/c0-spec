@@ -97,7 +97,9 @@ an empty unit and `␞␞` an empty record. Commits occur only at depth zero:
 
     record      = RS L ( keyed / positional )
     positional  = unit *( US L unit )
-    unit        = [ ( plain / text / level / reference ) L ] *note
+    unit        = [ value L ] *note *sub-unit
+    sub-unit    = 1*( SUB L ) US L [ value L ] *note
+    value       = plain / text / level / reference
     keyed       = *note keyed-unit *( keyed-unit / note )
     keyed-unit  = [ BEL L ] SOH L name L US L unit
 
@@ -107,15 +109,30 @@ A record is keyed or positional, never both. A record is keyed when it
 holds at least one keyed unit, live or dead; `RS` alone, or RS followed
 only by notes (`␞␇n`), is a positional record of one empty unit. A unit holds at most one value, followed by any
 number of notes; a note is never a unit, so `␞a␇n␟b` is two units and
-`␞Alice␟␇old␟100` three. `SOH` followed (after layout) by `RS` is a
+`␞Alice␟␇old␟100` three. A sub-unit is not a unit of the record: `␞a␟b␚␟c`
+is two units, `b` holding the sub-unit `c`. `SOH` followed (after layout) by `RS` is a
 header row; `SOH` followed by anything else begins a keyed unit, which
 occurs only in a record or the heading. The heading's units take `hvalue`
 (no reference). A keyed record whose units are all dead is an empty map.
 
-**SUB** occurs only as the depth prefix of a group line (Heading and body
-above; DESIGN.md, Depth). SUB before any other byte, at the end of input,
-or before BEL (`␚␇␝b`) matches no production. `␇␚␝b` is a dead group line
-at depth two: BEL kills the line whole, prefix included.
+**SUB** before a code makes the element after it **subordinate** to the
+element before, at that code's grain (DESIGN.md, Subordinates). Two
+grains are open. SUB before GS is a subsection (Heading and body above).
+SUB before US is a **sub-unit**, a child of the unit before it, which does
+not count as a unit of the record; a keyed unit's value takes sub-units
+the same way (`␞␁name␟Alice␚␟alias`). The GS rules apply at every grain:
+the number of SUB is the depth, layout may follow each SUB, a sub-unit is
+at most one deeper than the sub-unit before it under the same unit and
+the first is at depth one, so `␞a␚␚␟c` is an error ("depth skipped"),
+and `␞a␚␟b␚␟c` is `a` holding two sub-units while `␞a␚␟b␚␚␟c` is `a`
+holding `b` holding `c`. The first unit of a record exists even when
+empty, so `␞␚␟c` is an empty unit holding `c`. SUB before RS, FS or SOH
+is **reserved**: the meaning is fixed, a sub-record, sub-file or sub-key,
+and it matches no production in this version. SUB before any other byte,
+at the end of input, or before BEL (`␚␇␝b`) matches no production. `␇␚␝b`
+is a dead group line at depth two: BEL kills the line whole, prefix
+included. `␇␚␟c` matches no production, as `␇␟` does: a unit is not an
+element BEL can kill.
 
 ## Values
 
@@ -166,8 +183,9 @@ payload; the commit ends the record before it.
 ## C0DIFF
 
 A diff (`shape` `diff`) has no grammar of its own: it is a `body` whose
-records are anchored patterns. What a diff may not hold, and what its
-records mean, is in `DIFF.md`.
+records are anchored patterns, a sub-unit on a unit being its
+substitution (`old␚␟new`). What a diff may not hold, and what its records
+mean, is in `DIFF.md`.
 
 ## Canonical constraints
 
@@ -182,7 +200,7 @@ Canonical Spans) is well-formed and additionally:
    kept as written;
 4. contains no notes, dead elements, commits, SYN, heading, EOT or EM.
    The canonical document span is a `body` with none of these.
-   A group line's SUB prefix is structure and is kept.
+   A SUB prefix is structure and is kept.
 
 A file as written carries SYN, a heading whose keys are unique, the
 canonical body, and EOT; the heading and markers are outside the hash.
@@ -192,9 +210,9 @@ canonical body, and EOT; the heading and markers are outside the hash.
 - Outside text, the hot test is `byte < 0x20`; on a hit, the byte's
   meaning is fixed by this grammar with two codes of lookahead, layout
   skipped (`SOH` then `RS`; `BEL` then the code it kills, which may be
-  `SOH` then `RS`, or `SUB` for a dead group line; `SUB` then `GS`; `DLE`
-  then the first code of the level). Depth is a count of SUB read
-  forward; nothing needs lookbehind.
+  `SOH` then `RS`, or `SUB` for a dead group line; `SUB` then `GS` or
+  `US`; `DLE` then the first code of the level). Depth is a count of SUB
+  read forward; nothing needs lookbehind.
 - Inside text, the reader looks for seven byte values; the parity of the
   DLE run before one of them says whether it is escaped, a lookbehind
   bounded by the run's length. A backward scan for the last ETB or for EM
