@@ -242,8 +242,9 @@ after the last commit. The C core and its bindings do not expose them.
    `@openbohemians` agent via dot-ai mail. The promised C0DIFF post is
    written (`posts/a-diff-that-is-data.md`, "A diff that is data") and
    the second post's two SUB lines respelled for subordination; pushed
-   (`51d4d0f`) and mailed to `@openbohemians` 2026-11-15 with a summary
-   line; awaiting their live commit.
+   (`51d4d0f`), mailed to `@openbohemians`, and **live 2026-11-15**
+   (website `2d344e4`): https://openbohemians.org/blog/a-diff-that-is-data/
+   listed first, the edits on the second post in place. Three posts live.
 
 ## How to resume
 
